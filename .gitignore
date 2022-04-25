@@ -1,0 +1,14 @@
+# IDEs
+*.code-workspace
+
+# Vim files
+*.swp
+*.swo
+*~
+
+#Mac
+.DS_Store
+
+
+#Hugo
+resources/_gen/

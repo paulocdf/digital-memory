@@ -1,5 +1,20 @@
+googleAnalytics = "G-M9P59JZWRK"
+
 baseURL = "https://paulocdf.github.io/digital-memory"
 languageCode = "en-us"
 title = "Digital Memory"
 theme = "hugo-book"
 
+[params]
+  # (Optional, default light) Sets color theme: light, dark or auto.
+  # Theme 'auto' switches between dark and light modes based on browser/os preferences
+  BookTheme = 'dark'
+  
+  # (Optional, default docs) Specify section of content to render as menu
+  # You can also set value to "*" to render all sections to menu
+  BookSection = 'docs'
+
+  # (Optional, default January 2, 2006) Configure the date format used on the pages
+  # - In git information
+  # - In blog posts
+  BookDateFormat = 'Jan 2, 2006'
