@@ -5,8 +5,6 @@ type: docs
 
 # Digital memory
 
-
-
 ## Introduction
 
 This section includes a high level overview of the wiki.
