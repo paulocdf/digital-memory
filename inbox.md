@@ -95,4 +95,11 @@ DO UPDATE SET deleted = excluded.deleted,
               
 ```
 
+
 Transaction Routing datasource -> https://vladmihalcea.com/read-write-read-only-transaction-routing-spring/
+Notes:
+```
+In my previous company we were using pgpool which stands as a middleware between your client and postgres servers, and serves also as load balancer.
+The configuration in our app (python/django application) was the same as it was with one postgres server (we had master with r/w and multiple r/o replicas), and the app was not “aware” about underlying postgres servers. That worked pretty well for us.
+Before that we were using pgbouncer which didn’t work well for us (can’t recall the reason but can check)
+```
