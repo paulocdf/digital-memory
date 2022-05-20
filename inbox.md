@@ -94,3 +94,5 @@ DO UPDATE SET deleted = excluded.deleted,
               updated_at = excluded.updated_at;
               
 ```
+
+Transaction Routing datasource -> https://vladmihalcea.com/read-write-read-only-transaction-routing-spring/
