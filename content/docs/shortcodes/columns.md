@@ -2,7 +2,6 @@
 
 Columns help organize shorter pieces of content horizontally for readability.
 
-
 ```html
 {{</* columns */>}} <!-- begin columns block -->
 # Left Content

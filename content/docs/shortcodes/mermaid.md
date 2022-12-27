@@ -11,7 +11,6 @@ create a `mermaid.json` file in your `assets` folder!
 
 ## Example
 
-{{< columns >}}
 ```tpl
 {{</* mermaid [class="text-center"]*/>}}
 stateDiagram-v2
@@ -25,7 +24,6 @@ stateDiagram-v2
 {{</* /mermaid */>}}
 ```
 
-<--->
 
 {{< mermaid >}}
 stateDiagram-v2
@@ -38,4 +36,3 @@ stateDiagram-v2
     note left of State2 : This is the note to the left.
 {{< /mermaid >}}
 
-{{< /columns >}}
