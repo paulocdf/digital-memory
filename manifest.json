@@ -1,14 +1,14 @@
 {
   "name": "Digital Memory",
   "short_name": "Digital Memory",
-  "start_url": "/digital-memory/",
-  "scope": "/digital-memory/",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#000000",
   "theme_color": "#000000",
   "icons": [
     {
-      "src": "/digital-memory/favicon.svg",
+      "src": "/favicon.svg",
       "sizes": "512x512"
     }
   ]
