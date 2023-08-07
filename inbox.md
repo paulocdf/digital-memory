@@ -106,3 +106,60 @@ Before that we were using pgbouncer which didn’t work well for us (can’t rec
 
 ## Best practices
 ### [Solid](https://www.digitalocean.com/community/conceptual_articles/s-o-l-i-d-the-first-five-principles-of-object-oriented-design)
+
+
+### Index Creation Partitioning Strategy for PostgreSQL example:
+```
+Query to check if index is created:
+-- List Indexes
+SELECT *
+from pg_catalog.pg_statio_all_indexes all_i 
+inner join pg_catalog.pg_index pg_i on all_i.indexrelid = pg_i.indexrelid 
+where schemaname = 'list_api' and relname  like 'partitioning_%'
+Setup new partitioned table with data:
+-- Create new partitinoed table
+CREATE TABLE list_api.partitioning_test (
+    id character varying NOT NULL,
+    account_id character varying NOT NULL
+) PARTITION BY LIST (account_id);
+ALTER TABLE ONLY list_api.partitioning_test ADD CONSTRAINT partitioning_test_pkey PRIMARY KEY (id, account_id);
+
+-- Create 2 partitions
+CREATE TABLE list_api.partitioning_test_account_acc1 PARTITION OF list_api.partitioning_test FOR VALUES IN ('acc_1');
+CREATE TABLE list_api.partitioning_test_account_acc2 PARTITION OF list_api.partitioning_test FOR VALUES IN ('acc_2')
+
+-- Insert Data
+insert into list_api.partitioning_test values ('1', 'acc_1');
+insert into list_api.partitioning_test values ('1', 'acc_2');
+select * from list_api.partitioning_test where account_id = 'acc_1';
+
+-- Add Columns
+alter table list_api.partitioning_test add column deleted boolean default false;
+alter table list_api.partitioning_test add column updated_at timestamp default current_timestamp;
+create index concurrently for partitions:
+CREATE INDEX concurrently partitioning_test_created_at_idx_1 ON only list_api.partitioning_test_account_acc1 USING btree (updated_at)  WHERE (deleted = false);
+create new account and check that it does not have new index:
+CREATE TABLE list_api.partitioning_test_account_acc3 PARTITION OF list_api.partitioning_test FOR VALUES IN ('acc_3');
+create remaninig index:
+CREATE INDEX concurrently partitioning_test_created_at_idx_2 ON only list_api.partitioning_test_account_acc2 USING btree (updated_at)  WHERE (deleted = false);
+CREATE INDEX concurrently partitioning_test_created_at_idx_3 ON only list_api.partitioning_test_account_acc3 USING btree (updated_at)  WHERE (deleted = false);
+create index WITHOUT Recursive
+-- Create IDX without Recursive
+CREATE INDEX partitioning_test_created_at_idx ON only list_api.partitioning_test USING btree (updated_at)  WHERE (deleted = false);
+create new partition table:
+CREATE TABLE list_api.partitioning_test_account_acc4 PARTITION OF list_api.partitioning_test FOR VALUES IN ('acc_4');
+
+
+
+
+
+16:48
+now if you check the new indexes, you notice that Postgresql creates automatically new index:
+-- List Indexes
+SELECT *
+from pg_catalog.pg_statio_all_indexes all_i 
+inner join pg_catalog.pg_index pg_i on all_i.indexrelid = pg_i.indexrelid 
+where schemaname = 'list_api' and relname  like 'partitioning_%'
+
+```
+
