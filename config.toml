@@ -4,6 +4,7 @@ baseURL = "https://paulocdf.github.io/digital-memory"
 languageCode = "en-us"
 title = "Digital Memory"
 theme = "hugo-book"
+enableInlineShortcodes = true
 
 [params]
   # (Optional, default light) Sets color theme: light, dark or auto.
@@ -18,3 +19,4 @@ theme = "hugo-book"
   # - In git information
   # - In blog posts
   BookDateFormat = 'Jan 2, 2006'
+

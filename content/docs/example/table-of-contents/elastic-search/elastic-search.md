@@ -8,6 +8,10 @@ weight: 1
 
 ## Chapter 1
 
+this is a reference to [learning-go](http://localhost:1313/digital-memory/docs/example/table-of-contents/learning-go/learning-go)
+
+learning-go.md
+
 ```tpl
 {{</* button relref="/" [class="..."] */>}}Get Home{{</* /button */>}}
 {{</* button href="https://github.com/alex-shpak/hugo-book" */>}}Contribute{{</* /button */>}}
