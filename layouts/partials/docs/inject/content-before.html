@@ -1,0 +1,28 @@
+{{- if .Parent -}}
+{{- /* Only show breadcrumbs on pages that are nested (not the homepage) */ -}}
+{{- $isHomepage := eq .RelPermalink .Site.Home.RelPermalink -}}
+{{- if not $isHomepage -}}
+<nav class="breadcrumbs" aria-label="Breadcrumb">
+  <ol>
+    <li><a href="{{ .Site.Home.RelPermalink }}">Home</a></li>
+    {{- $ancestors := slice -}}
+    {{- $current := . -}}
+    {{- range seq 10 -}}
+      {{- if $current.Parent -}}
+        {{- $current = $current.Parent -}}
+        {{- if $current.Parent -}}
+          {{- /* Skip auto-generated section pages with generic titles */ -}}
+          {{- if and $current.Title (ne (lower $current.Title) "docs") -}}
+            {{- $ancestors = $ancestors | append $current -}}
+          {{- end -}}
+        {{- end -}}
+      {{- end -}}
+    {{- end -}}
+    {{- range $ancestors | collections.Reverse -}}
+    <li><a href="{{ .RelPermalink }}">{{ .Title }}</a></li>
+    {{- end -}}
+    <li aria-current="page"><span>{{ .Title }}</span></li>
+  </ol>
+</nav>
+{{- end -}}
+{{- end -}}

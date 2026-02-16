@@ -2,6 +2,7 @@
 title: Tags
 weight: 99
 BookToC: false
+graph_exclude: true
 ---
 
 # Tags
