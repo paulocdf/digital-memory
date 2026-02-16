@@ -1,0 +1,18 @@
+{{- if eq .Type "mermaid" -}}
+  {{- if not (.Page.Scratch.Get "mermaid") -}}
+    <script src="{{ "mermaid.min.js" | relURL }}"></script>
+    {{ with resources.Get "mermaid.json" }}
+      <script>mermaid.initialize({{ .Content | safeJS }})</script>
+    {{ end }}
+    {{- .Page.Scratch.Set "mermaid" true -}}
+  {{- end -}}
+  <pre class="mermaid">
+    {{- .Inner -}}
+  </pre>
+{{- else -}}
+  <pre{{ with .Attributes.class }} class="{{ . }}"{{ end }}>
+    <code{{ if .Type }} class="language-{{ .Type }}"{{ end }}>
+      {{- .Inner -}}
+    </code>
+  </pre>
+{{- end -}}
