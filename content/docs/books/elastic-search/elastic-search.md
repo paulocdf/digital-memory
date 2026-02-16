@@ -1,22 +1,21 @@
 ---
-title: elastic-search
-weight: 1
+title: "Elastic Search"
+weight: 4
+tags: ["elasticsearch", "search", "databases"]
+category: "books"
 ---
-
 
 # Elastic Search
 
 ## Chapter 1
 
-this is a reference to [learning-go](http://localhost:1313/digital-memory/docs/example/table-of-contents/learning-go/learning-go)
-
-learning-go.md
+This is a reference to [Learning Go]({{< relref "/docs/books/learning-go/learning-go" >}})
 
 ```tpl
 {{</* button relref="/" [class="..."] */>}}Get Home{{</* /button */>}}
 {{</* button href="https://github.com/alex-shpak/hugo-book" */>}}Contribute{{</* /button */>}}
 
-texto sem código
+texto sem codigo
 
 var a = "coisa"
 ```
@@ -24,7 +23,7 @@ var a = "coisa"
 ```json
 {"a": "teste"}
 
-texto sem código
+texto sem codigo
 
 var a = "coisa"
 ```

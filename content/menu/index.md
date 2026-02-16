@@ -2,23 +2,32 @@
 headless: true
 ---
 
-- [**Example Site**]({{< relref "/docs/example" >}})
-- [Table of Contents]({{< relref "/docs/example/table-of-contents" >}})
-  - [Kubernetes in Action]({{< relref "/docs/example/table-of-contents/kubernetes-in-action/highlights" >}})
-  - [With ToC]({{< relref "/docs/example/table-of-contents/with-toc" >}})
-  - [Without ToC]({{< relref "/docs/example/table-of-contents/without-toc" >}})
-
-- [Collapsed]({{< relref "/docs/example/collapsed" >}})
-  - [3rd]({{< relref "/docs/example/collapsed/3rd-level" >}})
-    - [4th]({{< relref "/docs/example/collapsed/3rd-level/4th-level" >}})
+- [**Digital Memory**]({{< relref "/" >}})
 <br />
 
-- **Shortcodes**
-- [Buttons]({{< relref "/docs/shortcodes/buttons" >}})
-- [Columns]({{< relref "/docs/shortcodes/columns" >}})
-- [Expand]({{< relref "/docs/shortcodes/expand" >}})
-- [Hints]({{< relref "/docs/shortcodes/hints" >}})
-- [KaTex]({{< relref "/docs/shortcodes/katex" >}})
-- [Mermaid]({{< relref "/docs/shortcodes/mermaid" >}})
-- [Tabs]({{< relref "/docs/shortcodes/tabs" >}})
+- **Books**
+  - [Kubernetes in Action]({{< relref "/docs/books/kubernetes-in-action/highlights" >}})
+  - [Crucial Conversations]({{< relref "/docs/books/crucial-conversations/highlights" >}})
+  - [Learning Go]({{< relref "/docs/books/learning-go/learning-go" >}})
+  - [Elastic Search]({{< relref "/docs/books/elastic-search/elastic-search" >}})
+<br />
+
+- **Topics**
+<br />
+
+- **Inbox**
+  - [RabbitMQ]({{< relref "/docs/inbox/rabbitmq" >}})
+  - [PostgreSQL]({{< relref "/docs/inbox/postgresql" >}})
+  - [SOLID Principles]({{< relref "/docs/inbox/solid-principles" >}})
+<br />
+
+- **Reference**
+- [Shortcodes]({{< relref "/docs/shortcodes" >}})
+  - [Buttons]({{< relref "/docs/shortcodes/buttons" >}})
+  - [Columns]({{< relref "/docs/shortcodes/columns" >}})
+  - [Expand]({{< relref "/docs/shortcodes/expand" >}})
+  - [Hints]({{< relref "/docs/shortcodes/hints" >}})
+  - [KaTex]({{< relref "/docs/shortcodes/katex" >}})
+  - [Mermaid]({{< relref "/docs/shortcodes/mermaid" >}})
+  - [Tabs]({{< relref "/docs/shortcodes/tabs" >}})
 <br />
