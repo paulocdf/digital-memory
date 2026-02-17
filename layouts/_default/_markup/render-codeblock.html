@@ -10,9 +10,5 @@
     {{- .Inner -}}
   </pre>
 {{- else -}}
-  <pre{{ with .Attributes.class }} class="{{ . }}"{{ end }}>
-    <code{{ if .Type }} class="language-{{ .Type }}"{{ end }}>
-      {{- .Inner -}}
-    </code>
-  </pre>
+  {{ transform.HighlightCodeBlock . }}
 {{- end -}}
