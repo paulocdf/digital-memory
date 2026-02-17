@@ -8,4 +8,4 @@ bookCollapseSection: true
 
 A staging area for thoughts, ideas, and quick notes before they are organized into proper sections.
 
-{{< section-notes destination="inbox" >}}
+{{< single-note destination="inbox" >}}

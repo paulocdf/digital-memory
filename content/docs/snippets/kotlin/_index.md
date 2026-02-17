@@ -1,4 +1,0 @@
----
-title: "Kotlin"
-bookCollapseSection: true
----

@@ -10,5 +10,5 @@
     {{- .Inner -}}
   </pre>
 {{- else -}}
-  {{ transform.HighlightCodeBlock . }}
+  {{ (transform.HighlightCodeBlock .).Wrapped }}
 {{- end -}}

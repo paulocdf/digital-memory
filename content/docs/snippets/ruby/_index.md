@@ -1,4 +1,0 @@
----
-title: "Ruby"
-bookCollapseSection: true
----

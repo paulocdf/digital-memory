@@ -1,4 +1,0 @@
----
-title: "Go"
-bookCollapseSection: true
----
