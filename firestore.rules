@@ -14,5 +14,19 @@ service cloud.firestore {
       allow update, delete: if request.auth != null
                             && resource.data.userId == request.auth.uid;
     }
+
+    match /todos/{todoId} {
+      // Users can only read their own todos
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      // Users can only create todos assigned to themselves
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can only update/delete their own todos
+      allow update, delete: if request.auth != null
+                            && resource.data.userId == request.auth.uid;
+    }
   }
 }
