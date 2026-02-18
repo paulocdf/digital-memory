@@ -1,0 +1,20 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Users can only read/write files within their own directory
+    match /users/{userId}/attachments/{allPaths=**} {
+      allow read: if request.auth != null
+                  && request.auth.uid == userId;
+
+      allow write: if request.auth != null
+                   && request.auth.uid == userId
+                   // Max 10 MB per file
+                   && request.resource.size < 10 * 1024 * 1024
+                   // Only allow common file types
+                   && request.resource.contentType.matches('image/.*|application/pdf|text/.*|application/json|application/zip');
+
+      allow delete: if request.auth != null
+                    && request.auth.uid == userId;
+    }
+  }
+}
