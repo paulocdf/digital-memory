@@ -5,20 +5,11 @@ headless: true
 - [**Digital Memory**]({{< relref "/" >}})
 <br />
 
-- **Books**
-  - [Kubernetes in Action]({{< relref "/docs/books/kubernetes-in-action/highlights" >}})
-  - [Crucial Conversations]({{< relref "/docs/books/crucial-conversations/highlights" >}})
-  - [Learning Go]({{< relref "/docs/books/learning-go/learning-go" >}})
-  - [Elastic Search]({{< relref "/docs/books/elastic-search/elastic-search" >}})
+- [**Books**]({{< relref "/docs/books" >}})
+- [**Topics**]({{< relref "/docs/topics" >}})
+- [**Inbox**]({{< relref "/docs/inbox" >}})
+- [**Snippets**]({{< relref "/docs/snippets" >}})
 <br />
 
-- **Topics**
-<br />
-
-- **Inbox**
-  - [RabbitMQ]({{< relref "/docs/inbox/rabbitmq" >}})
-  - [PostgreSQL]({{< relref "/docs/inbox/postgresql" >}})
-  - [SOLID Principles]({{< relref "/docs/inbox/solid-principles" >}})
-<br />
-
+- [**Dashboard**]({{< relref "/docs/dashboard" >}})
 - [**Tags**]({{< relref "/docs/tags" >}})
