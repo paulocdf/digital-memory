@@ -63,6 +63,26 @@ service cloud.firestore {
                     && resource.data.userId == request.auth.uid;
     }
 
+    match /reviewCards/{cardId} {
+      // Users can only read their own review cards
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      // Users can only create review cards assigned to themselves
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'noteId']);
+
+      // Users can only update their own review cards; userId must stay unchanged
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can only delete their own review cards
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
+
     match /todos/{todoId} {
       // Users can only read their own todos
       allow read: if request.auth != null
