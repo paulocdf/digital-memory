@@ -3,9 +3,18 @@ Sign in with Google Loading dashboard... No completed tasks yet.
 Complete tasks in your Inbox to see time tracking insights here.
 Estimated vs Actual How accurate are your time estimates?
 Time by Category Where you spend your time
-Recent Activity Tasks completed by day</description></item><item><title>View Note</title><link>https://paulocdf.github.io/digital-memory/docs/view/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/view/</guid><description> Sign in to view this note Your notes are stored securely and require authentication to view.
+Recent Activity Tasks completed by day</description></item><item><title>Review</title><link>https://paulocdf.github.io/digital-memory/docs/review/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/review/</guid><description> Sign in to review notes Your review progress is stored securely and requires authentication.
+Sign in with Google Loading review queue...
+No notes to review Add notes to the review queue using the book icon on any note, or check back later when reviews are due.
+0 due now 0 total cards 0 reviewed today Show Content How well did you recall this?
+0 Blackout 1 Wrong 2 Hard 3 Difficult 4 Good 5 Perfect Next Card Review Schedule</description></item><item><title>Trash</title><link>https://paulocdf.github.io/digital-memory/docs/trash/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/trash/</guid><description> Sign in to view trash Your notes are stored securely and require authentication.
+Sign in with Google Loading trash... Trash is empty
+Deleted notes will appear here for 30 days before being permanently removed.
+Items are permanently deleted after 30 days Empty Trash</description></item><item><title>View Note</title><link>https://paulocdf.github.io/digital-memory/docs/view/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/view/</guid><description> Sign in to view this note Your notes are stored securely and require authentication to view.
 Sign in with Google Loading note...
 Note not found This note may have been deleted or you don't have access to it.
-Back to home</description></item><item><title>Tags</title><link>https://paulocdf.github.io/digital-memory/docs/tags/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/tags/</guid><description>Tags # Browse all topics by tag.
-No tags yet. Add tags to your notes to see them here.</description></item><item><title>Import Notes</title><link>https://paulocdf.github.io/digital-memory/docs/import-notes/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/import-notes/</guid><description> Notes Already Imported All notes have been imported to Firestore. Sign in to manage your notes or delete all data.
+Back to home Attachments Linked from</description></item><item><title>Tags</title><link>https://paulocdf.github.io/digital-memory/docs/tags/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/tags/</guid><description> Tags # Browse all topics by tag.
+Sign in to view tags Your notes are stored securely and require authentication.
+Sign in with Google Loading tags... No tags yet. Add tags to your notes to see them here.
+Clear filter</description></item><item><title>Import Notes</title><link>https://paulocdf.github.io/digital-memory/docs/import-notes/</link><pubDate>Mon, 01 Jan 0001 00:00:00 +0000</pubDate><guid>https://paulocdf.github.io/digital-memory/docs/import-notes/</guid><description> Notes Already Imported All notes have been imported to Firestore. Sign in to manage your notes or delete all data.
 Sign in with Google Delete All Notes All notes have been imported to Firestore. Use Quick Capture to add new notes.</description></item></channel></rss>
