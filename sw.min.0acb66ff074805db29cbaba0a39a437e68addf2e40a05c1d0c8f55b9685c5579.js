@@ -1,0 +1,1 @@
+if(navigator.serviceWorker){var swUrl="/digital-memory/sw.js",scope=swUrl.substring(0,swUrl.lastIndexOf("/")+1);navigator.serviceWorker.register(swUrl,{scope})}
