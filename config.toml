@@ -33,3 +33,6 @@ enableInlineShortcodes = true
   # - In blog posts
   BookDateFormat = 'Jan 2, 2006'
 
+  # Enable service worker for PWA support (offline caching + push notifications)
+  BookServiceWorker = true
+
