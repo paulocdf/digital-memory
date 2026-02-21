@@ -72,7 +72,7 @@ Last updated: 2026-02-21
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~2680 lines)
+**File**: `pomodoro-timer.html` (~2941 lines)
 
 ### Core Timer
 - Floating widget (`position: fixed`, bottom-right corner, 220px wide)
@@ -107,11 +107,29 @@ Last updated: 2026-02-21
 - Active-first sorting, compact layout
 - When timing a subtask, shows all sibling subtasks with active one highlighted
 
-### Two-Way Sync
+### Two-Way Sync (Same Device)
 - Custom events: `dm-pomodoro-stopped`, `dm-pomodoro-state-changed`, `dm-todos-updated`
 - State persistence in localStorage (`dm-pomodoro-state`) survives page navigation
 - Tracked minutes persisted separately (`dm-pomodoro-tracked`)
 - Finish-at calculation includes uncompleted subtask estimated times
+
+### Cross-Device Timer Sync
+- Firestore document `timerState/{userId}` — single document per user
+- Synced fields: `activeTodoId`, `activeTodoTitle`, `activeTodoCategory`, `activeParentId`, `phase`, `secondsLeft`, `totalPhaseSeconds`, `sessionCount`, `totalSessions`, `accumulatedWorkSeconds`, `startedAt`, `WORK_SECONDS`, `BREAK_SECONDS`, `isRunning`, `savedAt`, `deviceId`
+- **Write strategy**:
+  - `saveState()` (every 5s during tick) → localStorage + debounced Firestore write (10s debounce)
+  - `saveStateImmediate()` (on start/pause/resume/skip/reset/phase transitions) → localStorage + immediate Firestore write
+  - `clearState()` → removes localStorage + deletes Firestore document
+- **Read strategy**:
+  - On page load: restore from localStorage first (fast, same device)
+  - After `dmAuthReady`: `tryRemoteRestore()` — if no local timer, fetch from Firestore and apply
+  - `onSnapshot` listener for real-time cross-device updates
+- **Conflict resolution**:
+  - Per-tab `deviceId` prevents self-triggering from own writes
+  - `_lastFsSavedAt` timestamp skips stale snapshots
+  - `_fsSyncing` guard flag prevents write-back loops during remote state application
+  - States older than 4 hours are discarded
+- **Security**: Firestore rules enforce `request.auth.uid == userId`
 
 ### Push Notifications (PWA)
 - Notification permission requested on first timer start
@@ -194,9 +212,11 @@ Last updated: 2026-02-21
 **Files**: `head.html`, all shortcodes
 
 - Firebase Authentication with Google sign-in
-- `signInWithPopup` on desktop, `signInWithRedirect` on mobile
+- `window.dmSignIn()` global helper: popup-first for mobile + desktop, redirect fallback if popup blocked, redirect-only on localhost
+- Safari ITP workaround: `signInWithPopup` avoids cross-origin storage issues that cause `signInWithRedirect` to silently fail on iOS
 - `window.dmAuthReady` promise gates all auth-dependent code
 - Mobile detection: `window.dmIsMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)`
+- All 11 sign-in handlers across all files call `window.dmSignIn()`
 - All auth subscribers use Pattern A (`dmAuthReady.then()` deferral)
 
 ---

@@ -104,5 +104,12 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
     }
+
+    match /timerState/{userId} {
+      // Users can only read/write their own timer state document
+      // Document ID is the user's UID
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
   }
 }
