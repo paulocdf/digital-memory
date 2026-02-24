@@ -85,10 +85,12 @@ service cloud.firestore {
 
     match /todos/{todoId} {
       // Users can read their own todos OR todos shared with them
+      // Note: no "collaborators is list" guard here — Firestore query-based
+      // rule evaluation needs the rule to match the query constraints directly.
+      // An array-contains query already implies the field is an array.
       allow read: if request.auth != null
                   && (resource.data.userId == request.auth.uid
-                      || (resource.data.collaborators is list
-                          && request.auth.uid in resource.data.collaborators));
+                      || request.auth.uid in resource.data.collaborators);
 
       // Users can only create todos assigned to themselves
       allow create: if request.auth != null
