@@ -84,9 +84,11 @@ service cloud.firestore {
     }
 
     match /todos/{todoId} {
-      // Users can only read their own todos
+      // Users can read their own todos OR todos shared with them
       allow read: if request.auth != null
-                  && resource.data.userId == request.auth.uid;
+                  && (resource.data.userId == request.auth.uid
+                      || (resource.data.collaborators is list
+                          && request.auth.uid in resource.data.collaborators));
 
       // Users can only create todos assigned to themselves
       allow create: if request.auth != null
@@ -95,14 +97,57 @@ service cloud.firestore {
                     && request.resource.data.title is string
                     && request.resource.data.title.size() <= 500;
 
-      // Users can only update their own todos; userId must stay unchanged
+      // Owner can update anything; collaborators can update but not change userId or collaborators
       allow update: if request.auth != null
-                    && resource.data.userId == request.auth.uid
-                    && request.resource.data.userId == request.auth.uid;
+                    && (
+                      // Owner: full update access, userId must stay unchanged
+                      (resource.data.userId == request.auth.uid
+                       && request.resource.data.userId == request.auth.uid)
+                      ||
+                      // Collaborator: can update task fields but not ownership or sharing
+                      (resource.data.collaborators is list
+                       && request.auth.uid in resource.data.collaborators
+                       && request.resource.data.userId == resource.data.userId
+                       && request.resource.data.collaborators == resource.data.collaborators)
+                    );
 
-      // Users can only delete their own todos
+      // Only owner can delete
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
+    }
+
+    match /taskShares/{shareId} {
+      // Owner and invitees can read
+      allow read: if request.auth != null
+                  && (resource.data.ownerId == request.auth.uid
+                      || resource.data.inviteeEmail == request.auth.token.email);
+
+      // Only authenticated users can create, and they must be the owner
+      allow create: if request.auth != null
+                    && request.resource.data.ownerId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['ownerId', 'todoId', 'inviteeEmail', 'status']);
+
+      // Owner can update anything; invitee can only update status (accept/decline)
+      allow update: if request.auth != null
+                    && (resource.data.ownerId == request.auth.uid
+                        || (resource.data.inviteeEmail == request.auth.token.email
+                            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['status', 'inviteeUid', 'updatedAt'])));
+
+      // Only owner can delete
+      allow delete: if request.auth != null
+                    && resource.data.ownerId == request.auth.uid;
+    }
+
+    match /users/{userId} {
+      // Any authenticated user can look up other users (for sharing by email)
+      allow read: if request.auth != null;
+
+      // Users can only create/update their own profile
+      allow create, update: if request.auth != null
+                            && request.auth.uid == userId;
+
+      // Users cannot delete profiles
+      allow delete: if false;
     }
 
     match /timerState/{userId} {
