@@ -112,15 +112,24 @@ service cloud.firestore {
                        && request.resource.data.collaborators == resource.data.collaborators)
                       ||
                       // Invitee self-adding to collaborators after accepting a share:
-                      // Verify an accepted taskShares doc exists with deterministic ID (todoId_inviteeUid)
+                      // Verify an accepted taskShares doc exists with deterministic ID (todoId_inviteeUid).
+                      // Handles both cases: collaborators field exists as list, or is missing/null.
                       (request.resource.data.userId == resource.data.userId
-                       && !(request.auth.uid in resource.data.collaborators)
                        && request.auth.uid in request.resource.data.collaborators
-                       && request.resource.data.collaborators.hasAll(resource.data.collaborators)
-                       && request.resource.data.collaborators.size() == resource.data.collaborators.size() + 1
                        && exists(/databases/$(database)/documents/taskShares/$(todoId + '_' + request.auth.uid))
                        && get(/databases/$(database)/documents/taskShares/$(todoId + '_' + request.auth.uid)).data.status == 'accepted'
-                       && get(/databases/$(database)/documents/taskShares/$(todoId + '_' + request.auth.uid)).data.inviteeUid == request.auth.uid)
+                       && get(/databases/$(database)/documents/taskShares/$(todoId + '_' + request.auth.uid)).data.inviteeUid == request.auth.uid
+                       && (
+                         // Case A: collaborators field exists — ensure only one uid is added, none removed
+                         (resource.data.collaborators is list
+                          && !(request.auth.uid in resource.data.collaborators)
+                          && request.resource.data.collaborators.hasAll(resource.data.collaborators)
+                          && request.resource.data.collaborators.size() == resource.data.collaborators.size() + 1)
+                         ||
+                         // Case B: collaborators field is missing/null — new array must be exactly [inviteeUid]
+                         (!(resource.data.collaborators is list)
+                          && request.resource.data.collaborators.size() == 1)
+                       ))
                     );
 
       // Only owner can delete
