@@ -277,6 +277,100 @@ Last updated: 2026-02-21
 
 ---
 
+## 11. Task Sharing
+
+**Files**: `dm-sync.html`, `todo-list.html`, `todo-edit-modal.html`, `body.html`, `firestore.rules`
+
+### Architecture
+
+Task sharing uses a **hybrid client-side + security rules** approach. No Cloud Functions required.
+
+- **Deterministic share IDs**: `taskShares` documents use the ID format `{todoId}_{inviteeUid}`, allowing Firestore security rules to construct the path and validate the share exists.
+- **Invitee self-sufficient**: When User B accepts a share, they update the `taskShares` doc AND add themselves to the todo's `collaborators` array. The security rules verify the accepted `taskShares` doc exists before allowing the collaborators update.
+- **Owner notification**: The owner's client has a real-time `onSnapshot` listener on their `taskShares` docs to detect acceptance/decline in real-time.
+
+### Flow: Sharing a Task
+
+1. **User A shares with User B** (by email):
+   - Looks up User B via `users` collection by email
+   - Creates a `taskShares/{todoId}_{inviteeUid}` doc with `status: 'pending'`
+   - The todo's `collaborators` array is NOT modified yet
+
+2. **User B sees the invitation**:
+   - Real-time `onSnapshot` listener on `taskShares` where `inviteeEmail == user.email` picks up the new share
+   - Invitation banner renders with Accept/Decline buttons
+
+3. **User B accepts**:
+   - Updates `taskShares` doc: `status: 'accepted'`, `inviteeUid: user.uid`
+   - Updates `todos` doc: `collaborators: arrayUnion(user.uid)` — allowed by security rules because they verify the accepted `taskShares` doc exists
+   - Fetches the shared todo into local IDB
+
+4. **User A sees the acceptance**:
+   - Owner-side `onSnapshot` listener on `taskShares` where `ownerId == userId` detects the status change
+   - UI updates to show the collaborator
+
+### Offline Resilience
+
+- User A can share tasks and go offline. User B can still accept and modify the shared tasks independently.
+- When User A comes back online, `syncTodos()` fetches the latest state (including User B's modifications), and the owner-side `taskShares` listener/sync picks up acceptance status.
+- `syncTodos()` has a guard to skip deletion of todos where the current user is in the `collaborators` array, preventing shared tasks from being wiped during owner-only sync passes.
+
+### Permissions (Firestore Rules)
+
+| Action | Owner | Collaborator (accepted) | Invitee (pre-accept) |
+|--------|-------|------------------------|---------------------|
+| Read todo | Yes | Yes | No |
+| Update todo fields | Yes | Yes (cannot change `userId` or `collaborators`) | No |
+| Add self to `collaborators` | N/A | N/A | Yes (only via accepted `taskShares` doc verification) |
+| Delete todo | Yes | No | No |
+| Read `taskShares` | Yes (as owner) | Yes (as invitee) | Yes (as invitee) |
+| Update `taskShares` | Yes (any field) | Only `status`, `inviteeUid`, `updatedAt` | Only `status`, `inviteeUid`, `updatedAt` |
+| Delete `taskShares` | Yes | No | No |
+
+### Data Model
+
+**`taskShares` collection** (doc ID: `{todoId}_{inviteeUid}`):
+```javascript
+{
+  todoId, ownerId, ownerEmail, ownerName,
+  inviteeEmail, inviteeUid,
+  status: 'pending' | 'accepted' | 'declined',
+  createdAt, updatedAt
+}
+```
+
+**`todos` collection** (extended fields):
+```javascript
+{
+  // ...existing fields...
+  collaborators: ['uid1', 'uid2'],  // array of collaborator UIDs
+}
+```
+
+**`users` collection** (doc ID: user UID):
+```javascript
+{
+  email, displayName, photoURL, createdAt, updatedAt
+}
+```
+
+### Key Functions (dm-sync.html)
+
+| Function | Purpose |
+|----------|---------|
+| `shareTask(todoId, email)` | Create a `taskShares` doc, look up invitee by email |
+| `acceptShare(shareId)` | Update status to `accepted`, add self to todo's `collaborators` |
+| `declineShare(shareId)` | Update status to `declined` |
+| `unshareTask(shareId)` | Delete share doc, remove collaborator from todo (owner only) |
+| `getSharesForTodo(todoId)` | Get all shares for a specific todo from IDB |
+| `getPendingInvites()` | Get pending invitations for current user from IDB |
+| `getMyShares()` | Get all shares owned by current user from IDB |
+| `syncTaskShares(userId)` | Sync task shares from Firestore (owner + invitee queries) |
+| `syncSharedTodos(userId)` | Fetch todos where user is collaborator, merge into IDB |
+| `startSharedTaskListeners(userId)` | Start real-time listeners for shared todos, incoming invites, and owner share status changes |
+
+---
+
 ## Architecture Notes
 
 - **No build system**: All JS is inline in Hugo HTML partials. No npm, no bundler, no transpilation.
