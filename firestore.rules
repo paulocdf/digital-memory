@@ -111,5 +111,19 @@ service cloud.firestore {
       allow read, write: if request.auth != null
                          && request.auth.uid == userId;
     }
+
+    match /userSettings/{userId} {
+      // Users can only read/write their own settings (closedDays, etc.)
+      // Document ID is the user's UID
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
+
+    match /pomodoroProgress/{userId} {
+      // Users can only read/write their own pomodoro progress
+      // Document ID is the user's UID
+      allow read, write: if request.auth != null
+                         && request.auth.uid == userId;
+    }
   }
 }
