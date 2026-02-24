@@ -8,6 +8,7 @@ headless: true
 - [**Books**]({{< relref "/docs/books" >}})
 - [**Topics**]({{< relref "/docs/topics" >}})
 - [**Inbox**]({{< relref "/docs/inbox" >}})
+- [**Board**]({{< relref "/docs/board" >}})
 - [**Snippets**]({{< relref "/docs/snippets" >}})
 <br />
 
