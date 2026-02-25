@@ -71,7 +71,7 @@ service cloud.firestore {
       // Users can only create review cards assigned to themselves
       allow create: if request.auth != null
                     && request.resource.data.userId == request.auth.uid
-                    && request.resource.data.keys().hasAll(['userId', 'noteId']);
+                    && request.resource.data.keys().hasAll(['userId']);
 
       // Users can only update their own review cards; userId must stay unchanged
       allow update: if request.auth != null
