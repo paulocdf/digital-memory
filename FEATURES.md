@@ -1,162 +1,130 @@
 # Digital Memory — Feature Reference
 
-This document catalogues all features currently implemented in Digital Memory.
-It is intended for developers and product stakeholders to understand what exists
-in the codebase today.
+Complete inventory of all features implemented in Digital Memory. For development guidance, see `AGENT.md`. For code patterns, see `CONVENTIONS.md`.
 
-Last updated: 2026-02-21
-
----
-
-## Tech Stack
-
-- **Static site generator**: Hugo
-- **Theme**: hugo-book (customized, in `themes/hugo-book/`)
-- **Frontend**: Vanilla JS (no framework, no bundler) — all JS is inline in Hugo partials/shortcodes
-- **Styling**: SCSS compiled by Hugo (`_custom.scss`, `_graph.scss`)
-- **Backend**: Firebase (Firestore for cloud sync, Firebase Auth for authentication)
-- **Local storage**: IndexedDB (local-first sync via `dm-sync.html`)
-- **AI**: In-browser LLM via WebLLM (Qwen2.5-0.5B-Instruct) — no server calls
-- **Charts**: D3.js v7.0.1
-- **Drag & drop**: SortableJS
-- **PWA**: Service worker + web app manifest (installable on iOS/Android)
+Last updated: 2026-02-27
 
 ---
 
 ## 1. Task Management (Inbox)
 
-**Files**: `todo-list.html`, `todo-edit-modal.html`, `quick-capture-modal.html`
+**Files**: `todo-list.html` (~6,200 lines), `todo-edit-modal.html` (~1,840 lines)
 
 ### Core
 - Create, edit, delete, and reorder tasks
-- Subtasks with parent-child hierarchy (`parentId` field)
-- Drag-and-drop reordering via SortableJS
-- Status lifecycle: active → done → archived → deleted
-- Scheduled dates for tasks
-- Categories for organization
-- Estimated duration per task (`estimatedMin`)
-- Actual tracked time (`actualMin`)
+- Subtasks with parent-child hierarchy (`parentId` field, one level deep)
+- Auto-complete parent when all children are done (`actualMin` = sum of children)
+- Drag-and-drop reordering via SortableJS (within and across day groups)
+- Status lifecycle: active -> done -> deleted (soft delete)
+- Scheduled dates, freeform categories, estimated/actual duration tracking
+- Fractional `order` field for position tracking
+
+### Bullet Journal (BuJo) Rapid-Logging
+- Three entry types: `*` Task, `o` Event, `-` Note
+- States: open, done, migrated, scheduled
+- Click bullet cycles open <-> done; right-click opens state picker
+- Tasks use completion modal; events/notes complete directly (no time tracking)
+- Color coding per type and state
 
 ### AI-First Task Creation
 - Quick Capture defaults to AI mode
-- Natural language parsing extracts: title, due date, time-of-day, priority, duration, category
-- Multi-action detection splits compound sentences into separate tasks (e.g., "buy milk and call dentist" → 2 tasks)
+- Natural language parsing extracts: title, due date, time-of-day, duration, category
+- Multi-action detection splits compound sentences into separate tasks
 - AI proactive suggestions: subtasks, scheduling, follow-ups
-- Tasks moved to "Today" filter automatically get today's date
-
-### Bullet Journal (BuJo) Rapid-Logging
-- Three entry types: `•` Task, `○` Event, `–` Note
-- `bujoType` field: task / event / note
-- `bujoState` field: open / done / migrated / scheduled
-- Click bullet cycles open ↔ done; right-click opens state picker
-- Tasks use completion modal; events/notes complete directly (no modal, no time tracking)
-- Hover morph: open → checkmark on hover, done → original icon on hover
-- Color coding per type and state:
-  - Task: open `#3d3d3d`, done `#7a7a7a`, migrated `#8b6e4e`, scheduled `#5b7a8a`
-  - Event: open `#4a7a9b`, done `#7a9aab`
-  - Note: open `#888888`, done `#7a7a7a`
 
 ### Edit Modal
-- Double-click a task to open edit modal
-- Edit title, category, scheduled date, estimated minutes, pomodoro config
-- Escape key closes modal
+- Edit title, category, scheduled date, estimated minutes, pomodoro config, BuJo type/state, kanban status
+- Task sharing UI (share by email, collaborator list)
+- Notes field for freeform text
 
 ### Instant Delete with Undo
-- Delete button immediately soft-deletes (no confirmation dialog)
-- Toast notification with "Undo" button (5-second window)
-- Snapshots pre-delete state for full restoration (task + subtasks)
-- `position: fixed` toast on `document.body` with `z-index: 9999`
-- Bulk "Archive All" retains confirmation modal
+- Delete immediately soft-deletes (no confirmation dialog)
+- Toast with "Undo" button (5-second window)
+- Snapshot captures pre-delete state for full restoration (task + subtasks)
+
+### UX Details
+- Category prompt on Enter (when adding task without category, popover opens first)
+- Cmd+Enter rapid subtask entry (saves and reopens input)
+- Drag handles hidden until hover (6-dot grip icon)
+- Task reorder across day groups updates `scheduledDate`
+- Estimated finish time per day group (sequential, accounts for active timer)
+- Custom minutes override input next to pomodoro button
+- Configurable default pomodoro count (from settings)
+- Auto-schedule today toggle (from settings)
 
 ---
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~2941 lines)
+**File**: `pomodoro-timer.html` (~4,020 lines)
 
 ### Core Timer
-- Floating widget (`position: fixed`, bottom-right corner, 220px wide)
+- Floating draggable widget (fixed, bottom-right, 220px wide)
 - Configurable work/break durations (per-task and global defaults)
 - Multi-session support (configurable pomodoro count per task)
 - Play/pause, reset, skip phase, stop controls
-- Session counter ("Session 2 of 4")
-- Progress bar with phase-colored fill (blue for work, green for break)
-- Page title shows countdown (`25:00 — Work | Digital Memory`)
+- Session counter, progress bar with phase-colored fill
+- Page title shows countdown (`25:00 - Work | Digital Memory`)
 - Time tracking: accumulated work seconds saved to task's `actualMin`
 
 ### Focus / Zen Mode
-- Full-screen overlay (85vw × 82vh, max 960px × 720px)
-- Two-column layout:
-  - **Left**: Large 5.5rem countdown, progress bar, controls (60px primary, 42px secondary), session label, session timeline, subtasks list, info section (started/left/finish)
-  - **Right** (260px): Task Details panel, Today's Stats panel (2×2 grid)
-- **Header strip**: Ambient visualizer canvas behind phase label and action buttons
+- Full-screen overlay (85vw x 82vh, max 960px x 720px)
+- Two-column layout: large countdown + controls (left), task details + stats (right)
+- Header strip with ambient visualizer canvas
 - Session timeline: visual blocks for each pomodoro (completed/current/remaining)
-- Responsive: tablets (<800px) stack to single column; mobile (<600px) full-screen
+- Subtask progress display within timer
+- Responsive: tablets stack to single column; mobile full-screen
 
 ### Ambient Visualizer
-- Canvas-based, renders in the focus mode header strip
-- **Aurora mode** (default): 12 soft glowing orbs with radial gradients, slow drift, gentle pulsing, trail fade via partial-alpha overlay
-- **Wave mode**: 3 layered oscilloscope lines with muted neon colors, evolving parameters, soft glow
+- Canvas-based, renders in focus mode header strip
+- **Aurora mode** (default): 12 soft glowing orbs with radial gradients, slow drift, trail fade
+- **Wave mode**: 3 layered oscilloscope lines with muted neon colors
 - Toggle button switches between modes
-- Dark background (`#0a0a14`), HiDPI-aware, auto-resizes
-- Starts/stops with focus mode lifecycle
-
-### Subtask Display in Timer
-- Progress header with mini bar ("Subtasks 2/5")
-- Checkbox-style indicators, right-aligned estimate pills
-- Active-first sorting, compact layout
-- When timing a subtask, shows all sibling subtasks with active one highlighted
-
-### Two-Way Sync (Same Device)
-- Custom events: `dm-pomodoro-stopped`, `dm-pomodoro-state-changed`, `dm-todos-updated`
-- State persistence in localStorage (`dm-pomodoro-state`) survives page navigation
-- Tracked minutes persisted separately (`dm-pomodoro-tracked`)
-- Finish-at calculation includes uncompleted subtask estimated times
+- HiDPI-aware, auto-resizes
 
 ### Cross-Device Timer Sync
-- Firestore document `timerState/{userId}` — single document per user
-- Synced fields: `activeTodoId`, `activeTodoTitle`, `activeTodoCategory`, `activeParentId`, `phase`, `secondsLeft`, `totalPhaseSeconds`, `sessionCount`, `totalSessions`, `accumulatedWorkSeconds`, `startedAt`, `WORK_SECONDS`, `BREAK_SECONDS`, `isRunning`, `savedAt`, `deviceId`
-- **Write strategy**:
-  - `saveState()` (every 5s during tick) → localStorage + debounced Firestore write (10s debounce)
-  - `saveStateImmediate()` (on start/pause/resume/skip/reset/phase transitions) → localStorage + immediate Firestore write
-  - `clearState()` → removes localStorage + deletes Firestore document
-- **Read strategy**:
-  - On page load: restore from localStorage first (fast, same device)
-  - After `dmAuthReady`: `tryRemoteRestore()` — if no local timer, fetch from Firestore and apply
-  - `onSnapshot` listener for real-time cross-device updates
-- **Conflict resolution**:
-  - Per-tab `deviceId` prevents self-triggering from own writes
-  - `_lastFsSavedAt` timestamp skips stale snapshots
-  - `_fsSyncing` guard flag prevents write-back loops during remote state application
-  - States older than 4 hours are discarded
-- **Security**: Firestore rules enforce `request.auth.uid == userId`
+- Firestore document `timerState/{userId}` (single doc per user)
+- Write: every 5s during tick (debounced 10s to Firestore) + immediate on state changes
+- Read: localStorage first (same device), then Firestore `tryRemoteRestore()`, then `onSnapshot` listener
+- Conflict resolution: per-tab `deviceId`, timestamp guards, 4-hour staleness cutoff
 
 ### Push Notifications (PWA)
-- Notification permission requested on first timer start
-- Service worker schedules notifications for phase end (work complete / break over)
+- Service worker schedules notifications for phase end
 - Notifications mirror to Apple Watch when iPhone is locked
-- Fallback: in-page `Notification` API when service worker unavailable
+- Fallback to in-page `Notification` API
 - Re-schedules on `visibilitychange` when app is backgrounded
-- Tap notification focuses the app window
 
-### Configurable Sound Settings
-- **Location**: Sidebar settings panel
-- **Notification sounds** (work end / break end): chime, bell, digital, bowl, ascending, pulse, none
+### Sound Settings
+- **Notification sounds** (work/break end): chime, bell, digital, bowl, ascending, pulse, none
 - **Tick sounds** (during work): tick-soft, tick-click, tick-woodblock, none (default)
 - **Volume slider**: 0-100%
-- **Preview buttons** next to each dropdown
+- Preview buttons next to each dropdown
 - All sounds synthesized via Web Audio API (no audio files)
-- localStorage keys: `dm-pomo-sound-work`, `dm-pomo-sound-break`, `dm-pomo-sound-tick`, `dm-pomo-sound-volume`
 - Global API: `window.dmSounds = { play(soundId, volume), presets, getVolume() }`
 
 ---
 
-## 3. Analytics (Time View)
+## 3. Kanban Board
 
-**Files**: `graph.js`, `_graph.scss`
+**File**: `kanban-board.html` (~1,670 lines)
+
+- 3-column board: To Do, In Progress, Done
+- Drag-and-drop between columns via SortableJS with visual feedback (clone follows cursor, column highlights on dragover)
+- Status sync: moving to Done marks task complete; moving out reopens
+- Done column time filter: Today, 7 days, All
+- Quick-add task button per column
+- Edit modal integration (click card to edit)
+- Keyboard-accessible card focus
+- Grab cursor on cards, ghost placeholder on drag
+
+---
+
+## 4. Dashboard / Analytics
+
+**File**: `dashboard.html` (~820 lines)
 
 ### Charts
-- **Donut chart**: Category breakdown of tracked time
+- **Donut chart**: Category breakdown of tracked time (D3.js)
 - **Bar chart**: Daily/weekly/monthly tracked time by category
 - **Stat cards**: Total tracked, daily average, top category, task count
 
@@ -164,218 +132,309 @@ Last updated: 2026-02-21
 - Today, Week, Month, Year, Custom date range, All
 
 ### Period-over-Period Comparison
-- For Week/Month/Year/Custom: automatically computes previous period of equal duration
-- Stat cards show delta arrows (▲/▼) with percentage change and previous absolute value
-- Donut chart: thin outer ring showing previous period category proportions
-- Bar chart: dashed ghost bars behind current bars for previous period
+- Automatically computes previous period of equal duration
+- Stat cards show delta arrows with percentage change
+- Donut chart: thin outer ring for previous period proportions
+- Bar chart: dashed ghost bars for previous period
 - Tooltips show "vs prev period" delta
-- "All" mode has no comparison; edge cases handled gracefully
 
 ---
 
-## 4. Notes & Knowledge Base
+## 5. Knowledge Graph
 
-**Files**: `note-viewer.html`, `single-note.html`, `section-notes.html`
+**File**: `graph.js` (~1,860 lines)
 
-- Markdown notes organized in Hugo content sections
-- Full-text search
-- Tag system with tag cloud (`tag-cloud.html`)
-- Knowledge graph visualization (`graph.js` with D3 force layout)
-- Import from external sources (`import-notes.html`)
-
----
-
-## 5. Spaced Repetition / Review Queue
-
-**File**: `review-queue.html`
-
-- Flashcard-based review system
-- Spaced repetition scheduling
-- Review queue with due items
+- D3.js force-directed graph on landing page
+- Nodes = notes, edges = wikilinks + title mentions
+- Built from IndexedDB data
+- Interactive: click to navigate, hover to highlight, scroll to zoom
+- Dark/light mode aware
 
 ---
 
-## 6. AI Companion
+## 6. Notes & Knowledge Base
 
-**File**: `ai-companion.html`
+**Files**: `note-viewer.html` (~690 lines), `single-note.html` (~630 lines), `section-notes.html` (~470 lines)
 
-- In-browser LLM (Qwen2.5-0.5B-Instruct via WebLLM)
-- No server-side API calls — runs entirely in the browser
-- System prompt, markdown rendering, streaming responses
-- Mode badges, error handling with retry
-- NLP parsing for task creation (`window.dmAI`)
+### Organization
+- Four content sections: Books (flat), Topics (flat), Snippets (grouped by language), Inbox (single-note)
+- Tag system with dynamic tag cloud (`tag-cloud.html`, ~300 lines)
+- Note pinning (thumbtack icon, pinned notes sort first in sidebar)
+- Wikilinks `[[Note Title]]` with auto-resolution
+- Backlinks section ("Linked from") with explicit/mention badges
+
+### Note Viewer
+- Full note content rendering via marked.js
+- Pin, review (SR), edit, history, delete action buttons
+- Attachment display section
+- Backlinks section
+
+### Note Editor
+**File**: `note-edit-modal.html` (~1,270 lines)
+- Markdown editor with toolbar (bold, italic, code, heading, todo checkbox)
+- Live preview panel (side-by-side on wide screens)
+- Tag management (type + Enter to add, Backspace to remove last)
+- Drag-drop file upload, paste upload, progress bar
+- Auto-insert markdown for uploaded images
+- Attachment gallery within editor
+
+### Version History
+**File**: `version-history-modal.html` (~570 lines)
+- LCS diff viewer showing changes between versions
+- Full content view mode
+- Restore and delete functionality
+- Max 50 versions per note, auto-pruned on save
+- Snapshot saved BEFORE each edit (captures previous state)
+
+### Import
+**File**: `import-notes.html`
+- Bulk import utility for notes from external sources
 
 ---
 
-## 7. Authentication
+## 7. Spaced Repetition / Review Queue
+
+**File**: `review-queue.html` (~840 lines)
+
+- SM-2 algorithm (SuperMemo 2) with quality ratings 0-5
+- Flashcard UI: show title first, reveal content on click, then rate
+- Keyboard shortcuts: Space=reveal, 0-5=rate, Enter=next
+- Stats bar with due/total counts, progress bar
+- Schedule list showing all enrolled notes with due dates and EF values
+- Explicit opt-in per note via book icon button
+- Dedicated page at `/docs/review/`
+
+---
+
+## 8. AI Companion
+
+**Files**: `ai-companion.html` (~2,260 lines), `ai-chat.html` (~1,280 lines)
+
+### Engine
+- In-browser LLM: Qwen2.5-0.5B-Instruct via WebLLM/WebGPU
+- ~350 MB first download (cached in browser), requires WebGPU support
+- No API keys, no server calls — entirely client-side
+- Enable/disable toggle in settings (persisted in localStorage)
+
+### Dual Interface
+- **Quick Capture AI mode**: Embedded chat in Quick Capture modal (`A` key opens)
+- **Full page chat**: Dedicated page at `/docs/ai/`
+- Both share engine instance via `window.dmAI`
+
+### Task Awareness
+- System prompt includes TODO data: Today, Overdue, Backlog, Upcoming, Recently Completed
+- User-editable custom context injected into system prompt
+- Quick actions: "Plan my day", "Suggest tasks", "Improve text", "Summarize"
+
+### Conversational Task Creation
+- 7 regex patterns detect task creation intent from natural language
+- Parses date, time estimate, category from message text
+- Creates task immediately without AI model involvement
+- Rich confirmation message with task details
+
+### Task Suggestions
+- Detects `**bold**` items in AI responses
+- Renders "Add as task" cards via `dm-ai-create-task` event
+- Works in both Quick Capture and full-page chat
+
+### Voice Input
+- Microphone button using Web Speech API
+- Available in Quick Capture AI mode and full-page chat
+
+---
+
+## 9. Task Sharing
+
+**Files**: `dm-sync.html`, `todo-list.html`, `todo-edit-modal.html`, `body.html`, `firestore.rules`
+
+### Architecture
+- Hybrid client-side + security rules approach (no Cloud Functions)
+- Deterministic share IDs: `{todoId}_{inviteeUid}`
+- Invitee self-sufficient: can accept and modify shared tasks even when owner is offline
+
+### Flow
+1. Owner shares by email -> creates `taskShares` doc with `status: 'pending'`
+2. Invitee sees invitation via real-time `onSnapshot` listener -> banner with Accept/Decline
+3. Invitee accepts -> updates share status + adds self to todo's `collaborators` array
+4. Owner notified via `onSnapshot` listener
+
+### Permissions
+- Owner: full CRUD on todo and shares
+- Collaborator: read + update todo fields (except `userId`, `collaborators`)
+- Invitee pre-accept: can only update share status
+
+---
+
+## 10. Data Sync Engine
+
+**File**: `dm-sync.html` (~3,100 lines)
+
+- IndexedDB as primary store (version 7, 8 object stores)
+- Firestore as cloud sync layer
+- Offline-first with write queue (`firestoreWrite()`)
+- Client-side ID generation for offline-compatible creates
+- Background sync every 5 minutes
+- ~40+ public methods via `window.dmSync`
+- Custom events for UI re-renders
+- `serializeTodo()` / `serializeNote()` field whitelists control sync
+
+---
+
+## 11. Authentication
 
 **Files**: `head.html`, all shortcodes
 
-- Firebase Authentication with Google sign-in
-- `window.dmSignIn()` global helper: popup-first for mobile + desktop, redirect fallback if popup blocked, redirect-only on localhost
-- Safari ITP workaround: `signInWithPopup` avoids cross-origin storage issues that cause `signInWithRedirect` to silently fail on iOS
+- Firebase Auth with Google sign-in
+- `window.dmSignIn()`: popup-first, redirect fallback if popup blocked
+- Safari ITP workaround: `signInWithPopup` avoids cross-origin storage issues
 - `window.dmAuthReady` promise gates all auth-dependent code
-- Mobile detection: `window.dmIsMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent)`
-- All 11 sign-in handlers across all files call `window.dmSignIn()`
-- All auth subscribers use Pattern A (`dmAuthReady.then()` deferral)
+- User isolation: IDB cleared on sign-out/user switch
 
 ---
 
-## 8. Data Sync
+## 12. Quick Capture
 
-**File**: `dm-sync.html`
+**Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~3,980 lines)
 
-- **Local-first**: IndexedDB as primary store, Firestore as cloud sync
-- `serializeTodo()` field whitelist controls what syncs to Firestore
-- Todo fields: id, userId, title, estimatedMin, actualMin, category, pomodoroCount, pomodoroLength, breakLength, done, status, parentId, order, scheduledDate, reminderAt, reminderFired, source, bujoType, bujoState, createdAt, updatedAt, completedAt
-- `updateTodoField(todoId, firestoreUpdates, localUpdates)` — schema-free updates
-- `createTodo(title, estimatedMin, parentId, scheduledDate, reminderAtMs, category, atTop, pomodoroCount, pomodoroLength, onDone, source, breakLength, bujoType)`
-- Public API: `window.dmSync`
+- 4 modes: AI (default), Note, Code, Todo
+- Tab/Shift+Tab cycles modes
+- Ctrl/Cmd+Enter saves
+- AI mode embeds chat inline with streaming
+- Todo mode has full fields (title, estimate, date, reminder)
+- Inbox append/new toggle for Note mode
 
 ---
 
-## 9. PWA / Installability
+## 13. Search
 
-**Files**: `config.toml`, `manifest.json`, `sw.js`, `sw-register.js`, `html-head.html`
+**File**: `search.js` (~380 lines)
+
+- Full-text search via FlexSearch v0.6.30
+- Indexes from IndexedDB (not Hugo's static data)
+- Index cached in IDB `meta` store for persistence
+- Validated by `noteCount` comparison on load
+- Invalidated and rebuilt on `dm-sync-complete`
+- Keyboard: Ctrl/Cmd+K or S or / to open, Escape to close, arrows to navigate
+
+---
+
+## 14. Export
+
+**File**: `export-modal.html` (~1,240 lines)
+
+- Bulk and single-item export
+- Scopes: Entire vault, notes, tasks, flashcards, books
+- ZIP export via JSZip
+
+---
+
+## 15. Trash
+
+**File**: `trash-list.html` (~290 lines)
+
+- Soft delete via `deletedAt` timestamp field
+- Restore, permanent delete, empty trash
+- Client-side auto-purge of items trashed 30+ days
+- Dedicated page at `/docs/trash/`
+
+---
+
+## 16. History (Calendar View)
+
+**File**: `note-history.html` (~880 lines)
+
+- Calendar grid view of past task activity
+- Closed days tracking
+- Dedicated page at `/docs/history/`
+
+---
+
+## 17. Settings
+
+**File**: `body.html` (sidebar panel)
+
+- Sidebar settings panel (gear icon between AI and Trash)
+- Pomodoro defaults: work duration, default session count
+- Auto-schedule today toggle
+- Sound settings: notification sounds, tick sounds, volume slider, preview buttons
+- AI custom context textarea
+- AI enable/disable toggle
+- All settings save instantly to localStorage, dispatch `dm-settings-changed` event
+
+---
+
+## 18. PWA / Installability
+
+**Files**: `manifest.json`, `sw.js`, `sw-register.js`
 
 - Web app manifest with standalone display mode
-- Service worker with network-first caching strategy
-- Apple PWA meta tags (`apple-mobile-web-app-capable`, status bar style, title)
-- Apple touch icon
-- Installable on iOS (Add to Home Screen) and Android
+- Service worker with network-first caching
+- Apple PWA meta tags (apple-mobile-web-app-capable, status bar, title, touch icon)
+- Installable on iOS and Android
 - Push notification support via service worker message passing
-- HTTPS via GitHub Pages (`paulocdf.github.io/digital-memory`)
 
 ---
 
-## 10. Settings
+## 19. Keyboard Shortcuts
 
-**File**: `body.html` (sidebar)
+**File**: `keyboard-shortcuts.html`
 
-- Settings panel in sidebar footer
-- Pomodoro defaults: short work, short break, long work, long break, default session count
-- Auto-schedule today toggle
-- Sound settings (work end, break end, tick sound, volume)
-- localStorage-based persistence
+- `?` key opens overlay (global, not in input fields)
+- Organized by context: Global, Search, Quick Capture, Edit, Review, Lightbox
+
+| Context | Key | Action |
+|---------|-----|--------|
+| Global | `Q` | Open Quick Capture |
+| Global | `A` | Open Quick Capture in AI mode |
+| Global | `T` | Focus task input |
+| Global | `E` | Edit current note |
+| Global | `[` | Toggle sidebar |
+| Global | `Ctrl/Cmd+K` | Open search |
+| Global | `S` or `/` | Open search |
+| Search | `Escape` | Close search |
+| Search | `Arrow keys` | Navigate results |
+| Search | `Enter` | Open selected |
+| Quick Capture | `Escape` | Close modal |
+| Quick Capture | `Ctrl/Cmd+Enter` | Save |
+| Quick Capture | `Tab` / `Shift+Tab` | Cycle modes |
+| Edit | `Escape` | Close modal |
+| Edit | `Ctrl/Cmd+Enter` | Save |
+| Edit | `Ctrl/Cmd+B/I/E` | Bold/Italic/Code |
+| Review | `Space` | Reveal content |
+| Review | `0-5` | Rate recall quality |
+| Lightbox | `Escape` | Close |
+| Lightbox | `+/-` | Zoom in/out |
+| Lightbox | `0` | Fit to view |
+
+---
+
+## 20. Diagrams
+
+**Files**: `html-head.html`, `_custom.scss`
+
+- Mermaid v9.2.0 (bundled locally) for flowcharts, sequence diagrams, etc.
+- Kroki API for PlantUML, D2, GraphViz, and other diagram types
+- Diagram lightbox with fullscreen pan/zoom
+- Dark mode aware (reads `data-theme` attribute)
 
 ---
 
 ## Global APIs
 
 | API | Purpose |
-|---|---|
-| `window.dmSync` | Data layer (CRUD, IndexedDB + Firestore) |
-| `window.dmPomodoro` | Timer control (start, stop, pause, resume, togglePause, isActive, getSessionInfo) |
-| `window.dmSounds` | Sound system (play, presets, getVolume) |
-| `window.dmAI` | NLP parsing for task creation |
-| `window.dmTodoEdit` | Edit modal control |
+|-----|---------|
+| `window.dmSync` | Data layer: CRUD for notes, todos, review cards, attachments, task shares (~40+ methods) |
+| `window.dmPomodoro` | Timer: `start()`, `stop()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `getActiveTodoId()` |
+| `window.dmSounds` | Sound: `play(soundId, volume)`, `presets`, `getVolume()` |
+| `window.dmAI` | AI: `isEnabled()`, `setEnabled()`, engine management, NLP parsing, task creation |
+| `window.dmTodoEdit` | Task edit modal: `open(todo, callback)` |
+| `window.dmEditModal` | Note edit modal: `open(note, callback)` |
+| `window.dmKeyboardShortcuts` | Shortcuts overlay: `open()`, `close()` |
 | `window.dmAuth` | Firebase Auth instance |
 | `window.dmDb` | Firestore instance |
-| `window.dmAuthReady` | Promise that resolves when auth is initialized |
+| `window.dmAuthReady` | Promise resolving when auth state is known |
+| `window.dmSignIn()` | Sign-in helper (popup-first, redirect fallback) |
 | `window.dmIsMobile` | Boolean for mobile device detection |
 | `window.dmIsLocalhost` | Boolean for local development detection |
-
----
-
-## 11. Task Sharing
-
-**Files**: `dm-sync.html`, `todo-list.html`, `todo-edit-modal.html`, `body.html`, `firestore.rules`
-
-### Architecture
-
-Task sharing uses a **hybrid client-side + security rules** approach. No Cloud Functions required.
-
-- **Deterministic share IDs**: `taskShares` documents use the ID format `{todoId}_{inviteeUid}`, allowing Firestore security rules to construct the path and validate the share exists.
-- **Invitee self-sufficient**: When User B accepts a share, they update the `taskShares` doc AND add themselves to the todo's `collaborators` array. The security rules verify the accepted `taskShares` doc exists before allowing the collaborators update.
-- **Owner notification**: The owner's client has a real-time `onSnapshot` listener on their `taskShares` docs to detect acceptance/decline in real-time.
-
-### Flow: Sharing a Task
-
-1. **User A shares with User B** (by email):
-   - Looks up User B via `users` collection by email
-   - Creates a `taskShares/{todoId}_{inviteeUid}` doc with `status: 'pending'`
-   - The todo's `collaborators` array is NOT modified yet
-
-2. **User B sees the invitation**:
-   - Real-time `onSnapshot` listener on `taskShares` where `inviteeEmail == user.email` picks up the new share
-   - Invitation banner renders with Accept/Decline buttons
-
-3. **User B accepts**:
-   - Updates `taskShares` doc: `status: 'accepted'`, `inviteeUid: user.uid`
-   - Updates `todos` doc: `collaborators: arrayUnion(user.uid)` — allowed by security rules because they verify the accepted `taskShares` doc exists
-   - Fetches the shared todo into local IDB
-
-4. **User A sees the acceptance**:
-   - Owner-side `onSnapshot` listener on `taskShares` where `ownerId == userId` detects the status change
-   - UI updates to show the collaborator
-
-### Offline Resilience
-
-- User A can share tasks and go offline. User B can still accept and modify the shared tasks independently.
-- When User A comes back online, `syncTodos()` fetches the latest state (including User B's modifications), and the owner-side `taskShares` listener/sync picks up acceptance status.
-- `syncTodos()` has a guard to skip deletion of todos where the current user is in the `collaborators` array, preventing shared tasks from being wiped during owner-only sync passes.
-
-### Permissions (Firestore Rules)
-
-| Action | Owner | Collaborator (accepted) | Invitee (pre-accept) |
-|--------|-------|------------------------|---------------------|
-| Read todo | Yes | Yes | No |
-| Update todo fields | Yes | Yes (cannot change `userId` or `collaborators`) | No |
-| Add self to `collaborators` | N/A | N/A | Yes (only via accepted `taskShares` doc verification) |
-| Delete todo | Yes | No | No |
-| Read `taskShares` | Yes (as owner) | Yes (as invitee) | Yes (as invitee) |
-| Update `taskShares` | Yes (any field) | Only `status`, `inviteeUid`, `updatedAt` | Only `status`, `inviteeUid`, `updatedAt` |
-| Delete `taskShares` | Yes | No | No |
-
-### Data Model
-
-**`taskShares` collection** (doc ID: `{todoId}_{inviteeUid}`):
-```javascript
-{
-  todoId, ownerId, ownerEmail, ownerName,
-  inviteeEmail, inviteeUid,
-  status: 'pending' | 'accepted' | 'declined',
-  createdAt, updatedAt
-}
-```
-
-**`todos` collection** (extended fields):
-```javascript
-{
-  // ...existing fields...
-  collaborators: ['uid1', 'uid2'],  // array of collaborator UIDs
-}
-```
-
-**`users` collection** (doc ID: user UID):
-```javascript
-{
-  email, displayName, photoURL, createdAt, updatedAt
-}
-```
-
-### Key Functions (dm-sync.html)
-
-| Function | Purpose |
-|----------|---------|
-| `shareTask(todoId, email)` | Create a `taskShares` doc, look up invitee by email |
-| `acceptShare(shareId)` | Update status to `accepted`, add self to todo's `collaborators` |
-| `declineShare(shareId)` | Update status to `declined` |
-| `unshareTask(shareId)` | Delete share doc, remove collaborator from todo (owner only) |
-| `getSharesForTodo(todoId)` | Get all shares for a specific todo from IDB |
-| `getPendingInvites()` | Get pending invitations for current user from IDB |
-| `getMyShares()` | Get all shares owned by current user from IDB |
-| `syncTaskShares(userId)` | Sync task shares from Firestore (owner + invitee queries) |
-| `syncSharedTodos(userId)` | Fetch todos where user is collaborator, merge into IDB |
-| `startSharedTaskListeners(userId)` | Start real-time listeners for shared todos, incoming invites, and owner share status changes |
-
----
-
-## Architecture Notes
-
-- **No build system**: All JS is inline in Hugo HTML partials. No npm, no bundler, no transpilation.
-- **SCSS**: Compiled by Hugo's asset pipeline (`_custom.scss`, `_graph.scss`).
-- **Submodule**: Theme lives in `themes/hugo-book/` as a git submodule pointing to `paulocdf/hugo-book`.
-- **Hosting**: GitHub Pages at `https://paulocdf.github.io/digital-memory/`.
-- **Critical sync chokepoint**: `serializeTodo()` in `dm-sync.html` is a field whitelist. Any new field must be added there or it will be silently dropped during Firestore-to-IDB sync.
-- **Function hoisting**: All JS functions are inside IIFEs, so `function` declarations are hoisted and can reference each other freely.
+| `window.dmEnableCheckboxes()` | Enable interactive checkboxes in rendered markdown |
+| `window._wikilinkMap` | Map of note titles to IDs for wikilink resolution |
