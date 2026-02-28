@@ -24,20 +24,21 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | Theme | `hugo-book` (forked, git submodule at `themes/hugo-book/`) |
 | Frontend | Vanilla JavaScript — no framework, no bundler, no npm, no transpilation |
 | Styling | SCSS (Hugo asset pipeline: `_custom.scss`, `_graph.scss`) |
-| Database | Firebase Firestore (cloud sync) + IndexedDB (local-first primary store) |
+| Database | Firebase Firestore SDK 10.14.1 (cloud sync) + IndexedDB (local-first primary store) |
 | Auth | Firebase Auth (Google sign-in) |
 | Storage | Firebase Storage (file attachments, 10 MB max) |
 | AI | WebLLM (Qwen2.5-0.5B-Instruct) — runs entirely in-browser via WebGPU |
-| Charts | D3.js v7 |
+| Charts | D3.js v7 (bundled locally at `static/js/vendor/d3.min.js`) |
 | Drag & drop | SortableJS v1.15.6 (CDN) |
 | Markdown | marked.js v15 + highlight.js v11 (client-side) |
 | Search | FlexSearch v0.6.30 (bundled locally) |
+| ZIP export | JSZip v3.10.1 (CDN) |
 | PWA | Service worker + web app manifest |
 
 ## Architecture Principles
 
 1. **Local-first**: IndexedDB is the primary data store. Firestore is the sync layer. Reads come from IDB; writes go to both IDB and Firestore via `firestoreWrite()`.
-2. **No build system**: All JavaScript is inline within Hugo HTML partials and shortcodes. No npm, no bundler, no module system. ~37,000+ lines of custom code.
+2. **No build system**: All JavaScript is inline within Hugo HTML partials and shortcodes. No npm, no bundler, no module system. ~40,000+ lines of custom code.
 3. **Global API pattern**: Components communicate via `window.dmXxx` globals (e.g., `window.dmSync`, `window.dmPomodoro`, `window.dmAI`).
 4. **Modal pattern**: HTML in a Hugo partial, included via `inject/body.html`, exposes `window.dmXxx = { open, close }`.
 5. **Script loading order**: Firebase SDK (synchronous, `<head>`) -> page content -> `dm-sync.html` partial -> `inject/body.html` partial.
@@ -63,17 +64,26 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | `themes/hugo-book/assets/js/graph.js` | ~1,860 | D3.js knowledge graph on landing page |
 | `themes/hugo-book/layouts/partials/ai-companion.html` | ~2,260 | AI engine: WebLLM, NLP parsing, voice input, task-aware system prompt |
 | `themes/hugo-book/layouts/shortcodes/ai-chat.html` | ~1,280 | Full-page AI chat interface |
-| `themes/hugo-book/layouts/shortcodes/review-queue.html` | ~840 | Spaced repetition: SM-2 algorithm, flashcard UI |
+| `themes/hugo-book/layouts/shortcodes/review-queue.html` | ~1,230 | Spaced repetition: SM-2 algorithm, flashcard UI |
 | `themes/hugo-book/layouts/partials/note-edit-modal.html` | ~1,270 | Note editor: toolbar, preview, tags, drag-drop upload |
 | `themes/hugo-book/layouts/partials/todo-edit-modal.html` | ~1,840 | Task edit modal: all task fields, sharing UI |
 | `themes/hugo-book/layouts/partials/export-modal.html` | ~1,240 | Bulk & single-item export (ZIP via JSZip) |
 | `themes/hugo-book/layouts/partials/version-history-modal.html` | ~570 | Note version history with LCS diff |
-| `themes/hugo-book/layouts/shortcodes/note-viewer.html` | ~690 | Single note viewer with backlinks |
-| `themes/hugo-book/layouts/shortcodes/single-note.html` | ~630 | Page-level note display |
-| `themes/hugo-book/layouts/shortcodes/section-notes.html` | ~470 | Section note listing (Books, Topics, Snippets) |
-| `themes/hugo-book/layouts/shortcodes/trash-list.html` | ~290 | Trash: restore, permanent delete, auto-purge 30 days |
-| `themes/hugo-book/layouts/shortcodes/tag-cloud.html` | ~300 | Dynamic tag cloud |
+| `themes/hugo-book/layouts/partials/todo-complete-modal.html` | ~610 | Task completion modal |
+| `themes/hugo-book/layouts/partials/quick-capture-modal.html` | ~355 | Quick Capture modal markup and styles |
+| `themes/hugo-book/layouts/partials/confirm-dialog.html` | ~290 | Confirmation and alert dialog |
+| `themes/hugo-book/layouts/partials/keyboard-shortcuts.html` | ~250 | Keyboard shortcuts help panel |
+| `themes/hugo-book/layouts/partials/search-modal.html` | ~25 | Search modal markup |
+| `themes/hugo-book/layouts/shortcodes/note-viewer.html` | ~1,100 | Single note viewer with backlinks |
+| `themes/hugo-book/layouts/shortcodes/single-note.html` | ~980 | Page-level note display |
+| `themes/hugo-book/layouts/shortcodes/section-notes.html` | ~520 | Section note listing (Books, Topics, Snippets) |
+| `themes/hugo-book/layouts/shortcodes/trash-list.html` | ~670 | Trash: restore, permanent delete, auto-purge 30 days |
+| `themes/hugo-book/layouts/shortcodes/tag-cloud.html` | ~340 | Dynamic tag cloud |
 | `themes/hugo-book/layouts/shortcodes/note-history.html` | ~880 | Calendar view of task activity |
+| `themes/hugo-book/layouts/shortcodes/graph.html` | ~60 | Knowledge graph shortcode |
+| `themes/hugo-book/layouts/shortcodes/garden-sections.html` | ~160 | Garden sections overview on landing page |
+| `themes/hugo-book/layouts/shortcodes/garden-stats.html` | ~80 | Garden statistics on landing page |
+| `themes/hugo-book/layouts/shortcodes/import-notes.html` | ~170 | Note import utility |
 
 ### Styles
 | File | Lines | Description |
@@ -111,7 +121,7 @@ hugo server --disableFastRender
 3. For any data changes, use the `firestoreWrite()` dual-write pattern (see `CONVENTIONS.md`)
 4. If adding a new Firestore field to todos: **update `serializeTodo()` in `dm-sync.html`** (CRITICAL — fields not in this whitelist are silently dropped during sync)
 5. If adding a new Firestore field to notes: **update `serializeNote()` in `dm-sync.html`**
-6. If adding a new IDB object store: **increment the IDB version** (currently v7) and add upgrade logic
+6. If adding a new IDB object store: **increment the IDB version** (currently v12) and add upgrade logic
 7. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
 8. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`
 9. Update `FEATURES.md` with the new feature
@@ -145,8 +155,18 @@ hugo server --disableFastRender
 | `window.dmAI` | AI engine: NLP parsing, task creation, engine management |
 | `window.dmTodoEdit` | Task edit modal: `open(todo, callback)` |
 | `window.dmEditModal` | Note edit modal: `open(note, callback)` |
+| `window.dmExport` | Export modal: `open(options)`, `close()` |
+| `window.dmVersionHistory` | Version history modal: `open(note)`, `close()` |
+| `window.dmTodoComplete` | Task completion modal: `open(todo, callback)`, `close()` |
+| `window.dmKeyboardShortcuts` | Keyboard shortcuts panel: `open()`, `close()`, `toggle()` |
+| `window.dmConfirm` | Confirmation dialog: `dmConfirm(message, onConfirm)` |
+| `window.dmAlert` | Alert dialog: `dmAlert(message)` |
+| `window.dmFormat` | Date/time formatting utilities |
+| `window.dmCreateFlashcard` | Create flashcard from AI or other contexts |
+| `window.dmRenderDiagrams` | Render Mermaid/Kroki diagrams in content |
 | `window.dmAuth` | Firebase Auth instance |
 | `window.dmDb` | Firestore instance |
+| `window.dmStorage` | Firebase Storage instance |
 | `window.dmAuthReady` | Promise — resolves when auth state is known |
 | `window.dmSignIn()` | Sign-in helper (popup-first, redirect fallback) |
 
