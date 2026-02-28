@@ -56,13 +56,14 @@ Last updated: 2026-02-28
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~4,140 lines)
+**File**: `pomodoro-timer.html` (~4,040 lines)
 
 ### Core Timer
 - Floating draggable widget (fixed, bottom-right, 220px wide)
 - Configurable work/break durations (per-task and global defaults)
 - Multi-session support (configurable pomodoro count per task)
-- Play/pause, reset, skip phase, stop controls
+- Minimal controls: Play/Pause + Done (checkmark) during work; Skip added during breaks
+- Close (X) saves progress and closes timer (no confirmation)
 - Session counter, progress bar with phase-colored fill
 - Page title shows countdown (`25:00 - Work | Digital Memory`)
 - Time tracking: accumulated work seconds saved to task's `actualMin`

@@ -58,7 +58,7 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | File | Lines | Description |
 |------|-------|-------------|
 | `themes/hugo-book/layouts/partials/todo-list.html` | ~6,285 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time |
-| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~4,140 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
+| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~4,040 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
 | `themes/hugo-book/layouts/shortcodes/kanban-board.html` | ~1,670 | Kanban board: 3 columns, drag-and-drop between columns |
 | `themes/hugo-book/layouts/shortcodes/dashboard.html` | ~820 | Analytics dashboard: charts, stat cards, time filters |
 | `themes/hugo-book/assets/js/graph.js` | ~1,860 | D3.js knowledge graph on landing page |
