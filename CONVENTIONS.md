@@ -89,8 +89,9 @@ Components communicate via custom DOM events on `document`:
 | `dm-attachments-updated` | `dm-sync.html` | none | Attachments changed |
 | `dm-review-updated` | `dm-sync.html` | none | Review cards changed |
 | `dm-task-shares-updated` | `dm-sync.html` | none | Task shares changed |
-| `dm-pomodoro-stopped` | `pomodoro-timer.html` | `{ todoId, trackedMinutes }` | Timer stopped; update actualMin |
-| `dm-pomodoro-state-changed` | `pomodoro-timer.html` | `{ state }` | Timer state changed |
+| `dm-pomodoro-stopped` | `pomodoro-timer.html` | `{ todoId, trackedMinutes, sessionsCompleted, totalSessions }` | Timer stopped; update actualMin |
+| `dm-pomodoro-completed` | `pomodoro-timer.html` | `{ todoId, trackedMinutes }` | Done button pressed; mark task complete |
+| `dm-pomodoro-state-changed` | `pomodoro-timer.html` | `{ todoId, isRunning }` | Timer state changed |
 | `dm-settings-changed` | `body.html` | `{ key, value }` | User changed a setting |
 | `dm-ai-state-changed` | `ai-companion.html` | `{ status }` | AI engine status changed |
 | `dm-ai-load-progress` | `ai-companion.html` | `{ progress }` | AI model download progress |

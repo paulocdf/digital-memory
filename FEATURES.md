@@ -2,13 +2,13 @@
 
 Complete inventory of all features implemented in Digital Memory. For development guidance, see `AGENT.md`. For code patterns, see `CONVENTIONS.md`.
 
-Last updated: 2026-02-27
+Last updated: 2026-02-28
 
 ---
 
 ## 1. Task Management (Inbox)
 
-**Files**: `todo-list.html` (~6,200 lines), `todo-edit-modal.html` (~1,840 lines)
+**Files**: `todo-list.html` (~6,285 lines), `todo-edit-modal.html` (~1,840 lines)
 
 ### Core
 - Create, edit, delete, and reorder tasks
@@ -56,7 +56,7 @@ Last updated: 2026-02-27
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~4,020 lines)
+**File**: `pomodoro-timer.html` (~4,140 lines)
 
 ### Core Timer
 - Floating draggable widget (fixed, bottom-right, 220px wide)
@@ -66,6 +66,10 @@ Last updated: 2026-02-27
 - Session counter, progress bar with phase-colored fill
 - Page title shows countdown (`25:00 - Work | Digital Memory`)
 - Time tracking: accumulated work seconds saved to task's `actualMin`
+- Done button (checkmark) on compact widget and focus mode — finishes task with instant completion + undo toast (no modal)
+- Per-task progress persistence: saves accumulated work time and timer position to `dm-pomodoro-progress` localStorage key (keyed by todoId), survives browser close and task switching
+- Timer position restoration: when resuming a paused task, countdown resumes from exact position via `remainingSeconds`
+- "Started" indicator on todo items with saved progress (green badge: `started · Xmin`)
 
 ### Focus / Zen Mode
 - Full-screen overlay (85vw x 82vh, max 960px x 720px)
@@ -424,7 +428,7 @@ Last updated: 2026-02-27
 | API | Purpose |
 |-----|---------|
 | `window.dmSync` | Data layer: CRUD for notes, todos, review cards, attachments, task shares (~40+ methods) |
-| `window.dmPomodoro` | Timer: `start()`, `stop()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `getActiveTodoId()` |
+| `window.dmPomodoro` | Timer: `start()`, `stop()`, `finish()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `isTimerRunning()`, `getActiveTodoId()`, `getSessionInfo()`, `getTaskProgress(todoId)`, `clearTaskProgress(todoId)`, `getStartedAt()` |
 | `window.dmSounds` | Sound: `play(soundId, volume)`, `presets`, `getVolume()` |
 | `window.dmAI` | AI: `isEnabled()`, `setEnabled()`, engine management, NLP parsing, task creation |
 | `window.dmTodoEdit` | Task edit modal: `open(todo, callback)` |
