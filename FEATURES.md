@@ -8,7 +8,7 @@ Last updated: 2026-02-28
 
 ## 1. Task Management (Inbox)
 
-**Files**: `todo-list.html` (~6,285 lines), `todo-edit-modal.html` (~1,840 lines)
+**Files**: `todo-list.html` (~6,360 lines), `todo-edit-modal.html` (~1,840 lines)
 
 ### Core
 - Create, edit, delete, and reorder tasks
@@ -56,18 +56,19 @@ Last updated: 2026-02-28
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~4,040 lines)
+**File**: `pomodoro-timer.html` (~4,080 lines)
 
 ### Core Timer
 - Floating draggable widget (fixed, bottom-right, 220px wide)
 - Configurable work/break durations (per-task and global defaults)
 - Multi-session support (configurable pomodoro count per task)
-- Minimal controls: Play/Pause + Done (checkmark) during work; Skip added during breaks
+- Three-button control layout: Reset (discard) | Play/Pause | Next (complete & advance)
+- Reset discards all accumulated work time and restarts the timer fresh (stays open, paused)
+- Next completes the current task (instant completion with undo toast), finds the next undone task in the same day group, and auto-starts the timer on it. If no next task, just completes and closes.
 - Close (X) saves progress and closes timer (no confirmation)
 - Session counter, progress bar with phase-colored fill
 - Page title shows countdown (`25:00 - Work | Digital Memory`)
 - Time tracking: accumulated work seconds saved to task's `actualMin`
-- Done button (checkmark) on compact widget and focus mode — finishes task with instant completion + undo toast (no modal)
 - Per-task progress persistence: saves accumulated work time and timer position to `dm-pomodoro-progress` localStorage key (keyed by todoId), survives browser close and task switching
 - Timer position restoration: when resuming a paused task, countdown resumes from exact position via `remainingSeconds`
 - "Started" indicator on todo items with saved progress (green badge: `started · Xmin`)

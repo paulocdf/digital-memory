@@ -57,8 +57,8 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 ### Features
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/layouts/partials/todo-list.html` | ~6,285 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time |
-| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~4,040 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
+| `themes/hugo-book/layouts/partials/todo-list.html` | ~6,360 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time, `window.dmTodoList` API |
+| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~4,080 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
 | `themes/hugo-book/layouts/shortcodes/kanban-board.html` | ~1,670 | Kanban board: 3 columns, drag-and-drop between columns |
 | `themes/hugo-book/layouts/shortcodes/dashboard.html` | ~820 | Analytics dashboard: charts, stat cards, time filters |
 | `themes/hugo-book/assets/js/graph.js` | ~1,860 | D3.js knowledge graph on landing page |
@@ -150,7 +150,8 @@ hugo server --disableFastRender
 | API | Purpose |
 |-----|---------|
 | `window.dmSync` | Data layer: CRUD for notes, todos, review cards, attachments, task shares. ~40+ methods |
-| `window.dmPomodoro` | Timer: `start()`, `stop()`, `finish()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `isTimerRunning()`, `getActiveTodoId()`, `getSessionInfo()`, `getTaskProgress(todoId)`, `clearTaskProgress(todoId)`, `getStartedAt()` |
+| `window.dmPomodoro` | Timer: `start()`, `stop()`, `finish()`, `next()`, `reset()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `isTimerRunning()`, `getActiveTodoId()`, `getSessionInfo()`, `getTaskProgress(todoId)`, `clearTaskProgress(todoId)`, `getStartedAt()` |
+| `window.dmTodoList` | Task list queries: `getNextTask(todoId)` — returns next undone task in same day group |
 | `window.dmSounds` | Sound system: `play(soundId, volume)`, `presets`, `getVolume()` |
 | `window.dmAI` | AI engine: NLP parsing, task creation, engine management |
 | `window.dmTodoEdit` | Task edit modal: `open(todo, callback)` |
