@@ -105,6 +105,12 @@ async function setupProjectDetail(page: Page, tasks = TASKS) {
   await page.waitForFunction(() => !!(window as any).dmSync && !!(window as any).dmSync.putTodo);
   await seedData(page, tasks);
 
+  // Show done tasks so tests can interact with completed tasks
+  await page.evaluate(() => {
+    localStorage.setItem('dm-project-hide-done', 'false');
+    (window as any)._pjTest.setHideDone(false);
+  });
+
   // Use the test API to populate _projects and show detail view
   await page.evaluate((project) => {
     const pjTest = (window as any)._pjTest;
