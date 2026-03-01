@@ -93,7 +93,11 @@ async function cleanupProjectData(page: Page) {
   );
 }
 
-/** Start the pomodoro timer on a project task and wait for activeProjectId to populate. */
+/**
+ * Start the pomodoro timer on a project task.
+ * start() chains getTodo → getProject → initAndStart → enterFocusMode,
+ * so activeProjectId is populated before updateUpNext() runs.
+ */
 async function startProjectTask(page: Page, taskId: string, taskTitle: string) {
   await page.evaluate(
     ({ id, title }) => {
@@ -105,19 +109,6 @@ async function startProjectTask(page: Page, taskId: string, taskTitle: string) {
   await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
   // Pause immediately so timer ticks don't interfere with assertions
   await page.evaluate(() => (window as any).dmPomodoro.pause());
-  // Wait for activeProjectId to be populated (start() reads from IDB async)
-  await page.waitForFunction(
-    (projId) => {
-      // Access the module-scoped activeProjectId via a test hook or check the up-next strip
-      // Since we can't access closure vars, wait for dmSync.getTodo to have resolved
-      // by checking if the start() async chain completed (category element gets updated)
-      return true; // The IDB reads complete very quickly
-    },
-    PROJECT_ID,
-    { timeout: 3000 }
-  );
-  // Give the async getProject() call time to resolve and set activeProjectId
-  await page.waitForTimeout(500);
 }
 
 // ── Tests ──
@@ -139,30 +130,20 @@ test.describe('Pomodoro Project-Aware Features', () => {
   });
 
   test.describe('Up Next Strip — Project Tasks', () => {
-    test('shows Up Next strip with project tasks when timing a project task', async ({ page }) => {
+    test('shows Up Next strip immediately on initial focus entry', async ({ page }) => {
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      // Trigger updateUpNext by re-entering focus mode (it runs on focus enter)
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
-      await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
-
-      // Wait for the Up Next strip to appear (async IDB query)
+      // Up Next should appear on the initial focus entry — no collapse/expand needed
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
-      // Should show next tasks from the same project
       const upNextList = page.locator('#focus-upnext-list');
       await expect(upNextList).toBeVisible();
-
-      // Should contain at least the next project task
       await expect(upNextList.locator('.pomodoro-focus-upnext-item').first()).toContainText('Project Task Beta');
     });
 
     test('Up Next shows up to 5 tasks from the project', async ({ page }) => {
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       const items = page.locator('#focus-upnext-list .pomodoro-focus-upnext-item');
@@ -190,8 +171,6 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       const items = page.locator('#focus-upnext-list .pomodoro-focus-upnext-item');
@@ -202,12 +181,8 @@ test.describe('Pomodoro Project-Aware Features', () => {
     test('Up Next hides when timing the last project task', async ({ page }) => {
       await startProjectTask(page, 'proj-task-6', 'Project Task Zeta');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
-      await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
-
       // No tasks after the last one — strip should be hidden
-      // Give it time to resolve the async query
+      // Give the async IDB query time to resolve
       await page.waitForTimeout(1000);
       await expect(page.locator('#focus-panel-upnext')).toBeHidden();
     });
@@ -227,8 +202,6 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       const items = page.locator('#focus-upnext-list .pomodoro-focus-upnext-item');
@@ -239,6 +212,26 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       // Clean up the extra subtask
       await page.evaluate(() => (window as any).dmSync.deleteTodo('proj-sub-2a'));
+    });
+
+    test('Up Next still shows after exiting and re-entering focus mode', async ({ page }) => {
+      await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
+
+      await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
+
+      // Exit focus mode
+      await page.locator('#focus-collapse').click();
+      await expect(page.locator('#pomodoro-focus-overlay')).toBeHidden();
+
+      // Re-enter focus mode
+      await page.locator('#pomodoro-expand').click();
+      await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
+
+      // Up Next should still show
+      await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
+      await expect(
+        page.locator('#focus-upnext-list .pomodoro-focus-upnext-item').first()
+      ).toContainText('Project Task Beta');
     });
   });
 
@@ -318,7 +311,7 @@ test.describe('Pomodoro Project-Aware Features', () => {
         timeout: 3000,
       });
 
-      // Wait for the new start() to fully initialize (IDB reads)
+      // Wait for the new start() to fully initialize (IDB reads for project + task)
       await page.waitForTimeout(500);
 
       // Advance from task 2 → task 3
@@ -326,6 +319,28 @@ test.describe('Pomodoro Project-Aware Features', () => {
       await expect(page.locator('#focus-title')).toContainText('Project Task Gamma', {
         timeout: 3000,
       });
+    });
+
+    test('Up Next updates after advancing to next task', async ({ page }) => {
+      await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
+
+      // Verify initial Up Next shows Beta first
+      await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
+      await expect(
+        page.locator('#focus-upnext-list .pomodoro-focus-upnext-item').first()
+      ).toContainText('Project Task Beta');
+
+      // Advance to task 2
+      await page.locator('#focus-next').click();
+      await expect(page.locator('#focus-title')).toContainText('Project Task Beta', {
+        timeout: 3000,
+      });
+
+      // Up Next should now show Gamma first (Beta is the active task)
+      await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
+      await expect(
+        page.locator('#focus-upnext-list .pomodoro-focus-upnext-item').first()
+      ).toContainText('Project Task Gamma');
     });
   });
 
@@ -392,8 +407,6 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       // Verify no items from the other project appear
@@ -416,12 +429,9 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       // getAllTodos() filters out deletedAt, so task 2 won't appear
-      // But also _findNextProjectTasks checks deletedAt explicitly
       const allText = await page.locator('#focus-upnext-list').textContent();
       expect(allText).not.toContain('Project Task Beta');
       // First item should be Gamma
@@ -454,8 +464,6 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      await page.locator('#focus-collapse').click();
-      await page.locator('#pomodoro-expand').click();
       await expect(page.locator('#focus-panel-upnext')).toBeVisible({ timeout: 5000 });
 
       // Task 2 (event) should not appear; first should be Gamma
