@@ -14,3 +14,9 @@
 resources/_gen/
 public/*
 *.hugo_build.lock
+
+# Node / Playwright
+node_modules/
+test-results/
+playwright-report/
+blob-report/
