@@ -83,6 +83,28 @@ service cloud.firestore {
                     && resource.data.userId == request.auth.uid;
     }
 
+    match /projects/{projectId} {
+      // Users can only read their own projects
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+
+      // Users can only create projects assigned to themselves
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'name'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() <= 200;
+
+      // Users can only update their own projects; userId must stay unchanged
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid;
+
+      // Users can only delete their own projects
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
+
     match /todos/{todoId} {
       // Users can read their own todos OR todos shared with them
       // Note: no "collaborators is list" guard here — Firestore query-based

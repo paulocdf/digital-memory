@@ -90,12 +90,13 @@ Components communicate via custom DOM events on `document`:
 | `dm-review-updated` | `dm-sync.html` | none | Review cards changed |
 | `dm-task-shares-updated` | `dm-sync.html` | none | Task shares changed |
 | `dm-pomodoro-stopped` | `pomodoro-timer.html` | `{ todoId, trackedMinutes, sessionsCompleted, totalSessions }` | Timer stopped; update actualMin |
-| `dm-pomodoro-completed` | `pomodoro-timer.html` | `{ todoId, trackedMinutes }` | Next/Done pressed; mark task complete |
+| `dm-pomodoro-completed` | `pomodoro-timer.html` | `{ todoId, trackedMinutes, projectId }` | Next/Done pressed; mark task complete |
 | `dm-pomodoro-state-changed` | `pomodoro-timer.html` | `{ todoId, isRunning }` | Timer state changed |
 | `dm-settings-changed` | `body.html` | `{ key, value }` | User changed a setting |
 | `dm-ai-state-changed` | `ai-companion.html` | `{ status }` | AI engine status changed |
 | `dm-ai-load-progress` | `ai-companion.html` | `{ progress }` | AI model download progress |
-| `dm-ai-create-task` | `ai-companion.html` | `{ title, scheduledDate, estimatedMin, category }` | AI suggested a task to create |
+| `dm-ai-create-task` | `ai-companion.html` | `{ title, scheduledDate, estimatedMin, category, projectId }` | AI suggested a task to create |
+| `dm-projects-updated` | `dm-sync.html` | none | Projects changed; re-render project lists |
 
 **Listening:**
 ```javascript
@@ -180,15 +181,15 @@ function calculateOrderForPosition(container, newIndex, itemId) {
 
 ### IndexedDB
 
-- **Version is currently 7**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
-- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards.
-- **8 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares.
+- **Version is currently 13**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
+- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos.
+- **9 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects.
 
 ### Data Sync
 
 - **`serializeTodo()` is a field whitelist**: Any new todo field MUST be added here or it will be silently dropped during Firestore-to-IDB sync. This is the single most common source of bugs.
 - **`serializeNote()` same rule**: Must include `pinned`, `deletedAt`, and any new fields.
-- **`createTodo()` has 13 positional parameters**: `title, estimatedMin, parentId, scheduledDate, reminderAtMs, category, atTop, pomodoroCount, pomodoroLength, onDone, source, breakLength, bujoType`. Consider the order carefully when calling.
+- **`createTodo()` takes an options object**: `{ title, estimatedMin, parentId, scheduledDate, reminderAtMs, category, atTop, pomodoroCount, pomodoroLength, onDone, source, breakLength, bujoType, projectId }`. Previously used 13 positional parameters; refactored to named options for clarity.
 
 ### marked.js
 
