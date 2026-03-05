@@ -899,12 +899,12 @@ test.describe('Auth Mock — SPA Nav Auth Preservation', () => {
 test.describe('Auth Mock — Redirect Sign-in Flow', () => {
   test('dm-pending-redirect flag is cleared on page load', async ({ page }) => {
     await page.addInitScript(() => {
-      sessionStorage.setItem('dm-pending-redirect', '1');
+      localStorage.setItem('dm-pending-redirect', '1');
     });
     await page.goto('./docs/inbox/');
 
     // head.html should clear dm-pending-redirect on load
-    const flag = await page.evaluate(() => sessionStorage.getItem('dm-pending-redirect'));
+    const flag = await page.evaluate(() => localStorage.getItem('dm-pending-redirect'));
     expect(flag).toBeNull();
   });
 
@@ -913,7 +913,7 @@ test.describe('Auth Mock — Redirect Sign-in Flow', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.addInitScript(() => {
-      sessionStorage.setItem('dm-pending-redirect', '1');
+      localStorage.setItem('dm-pending-redirect', '1');
     });
     await page.goto('./docs/inbox/');
 
@@ -922,11 +922,11 @@ test.describe('Auth Mock — Redirect Sign-in Flow', () => {
 
   test('dm-pending-redirect flag is cleared on landing page too', async ({ page }) => {
     await page.addInitScript(() => {
-      sessionStorage.setItem('dm-pending-redirect', '1');
+      localStorage.setItem('dm-pending-redirect', '1');
     });
     await page.goto('./');
 
-    const flag = await page.evaluate(() => sessionStorage.getItem('dm-pending-redirect'));
+    const flag = await page.evaluate(() => localStorage.getItem('dm-pending-redirect'));
     expect(flag).toBeNull();
   });
 });
