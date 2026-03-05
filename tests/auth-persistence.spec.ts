@@ -68,7 +68,7 @@ function injectCachedUserAndFreezeAuth(page: Page) {
  * Replaces window.dmAuth with a mock that provides:
  * - onAuthStateChanged(cb) — registers listeners, fires asynchronously
  * - signOut() — emits null to all listeners
- * - signInWithPopup() — resolves with the initial user
+ * - signInWithCredential() — resolves with the initial user (GIS flow)
  * - currentUser — tracks the current user
  * - window._mockAuthEmit(user) — test hook to trigger state transitions
  * - window._mockAuthSubscribers — array of registered listeners
@@ -140,8 +140,8 @@ function injectMockAuth(page: Page, initialUser: typeof MOCK_FIREBASE_USER | nul
         (window as any)._mockAuthEmit(null);
         return Promise.resolve();
       },
-      signInWithPopup: function() {
-        // Simulate sign-in with the initial user
+      signInWithCredential: function() {
+        // Simulate GIS sign-in with the initial user
         var u = user || {
           uid: 'test-uid-123',
           displayName: 'Test User',
@@ -151,6 +151,8 @@ function injectMockAuth(page: Page, initialUser: typeof MOCK_FIREBASE_USER | nul
         (window as any)._mockAuthEmit(u);
         return Promise.resolve({ user: u });
       },
+      // Keep legacy methods as no-ops for compatibility
+      signInWithPopup: function() { return Promise.resolve({ user: null }); },
       signInWithRedirect: function() { return Promise.resolve(); },
       getRedirectResult: function() { return Promise.resolve(null); },
     };
@@ -176,7 +178,7 @@ function injectMockAuth(page: Page, initialUser: typeof MOCK_FIREBASE_USER | nul
 
     // Replace dmSignIn and dmRegisterUser with no-ops
     Object.defineProperty(window, 'dmSignIn', {
-      get() { return function() { mockAuth.signInWithPopup(); }; },
+      get() { return function() { mockAuth.signInWithCredential(); }; },
       set() {},
       configurable: true,
     });
