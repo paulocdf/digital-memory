@@ -28,6 +28,7 @@ export default defineConfig({
       use: { browserName: 'chromium' },
       testMatch: [
         'auth-persistence.spec.ts',
+        'auth-login-flows.spec.ts',
         'landing-page.spec.ts',
         'navigation.spec.ts',
         'sidebar.spec.ts',
