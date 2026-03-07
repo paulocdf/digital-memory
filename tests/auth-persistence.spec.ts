@@ -594,19 +594,23 @@ test.describe('Auth Mock — onAuthStateChanged Transitions', () => {
     await expect(page.locator('#kanban-content')).toBeHidden({ timeout: 5000 });
   });
 
-  test('null→user on landing page triggers auto-redirect to inbox', async ({ page }) => {
+  test('null→user on landing page stays on home page (no redirect)', async ({ page }) => {
     await injectMockAuth(page, null);
     await page.goto('./');
 
     // Sign-in button should be visible
     await expect(page.locator('#garden-signin')).toBeVisible({ timeout: 5000 });
 
-    // Simulate fresh sign-in (wasSignedInOnLoad is false)
+    // Simulate fresh sign-in
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
-    // Should redirect to inbox
-    await page.waitForURL(/inbox/, { timeout: 5000 });
-    expect(page.url()).toContain('inbox');
+    // Should stay on home page (no redirect to inbox)
+    await page.waitForTimeout(2000);
+    expect(page.url()).not.toContain('inbox');
+
+    // Auth UI should update in place
+    await expect(page.locator('#garden-signin')).toBeHidden();
+    await expect(page.locator('#garden-auth-user')).toBeVisible();
   });
 
   test('user→null on landing page shows sign-in and hides user info', async ({ page }) => {
@@ -778,9 +782,9 @@ test.describe('Auth Mock — garden-sections Auth Gating', () => {
   });
 });
 
-test.describe('Auth Mock — Auto-Redirect After Login', () => {
-  test('fresh login on front page redirects to inbox', async ({ page }) => {
-    // Start signed out (wasSignedInOnLoad = false)
+test.describe('Auth Mock — No Redirect After Login', () => {
+  test('fresh login on front page stays on home page', async ({ page }) => {
+    // Start signed out
     await injectMockAuth(page, null);
     await page.goto('./');
 
@@ -790,12 +794,14 @@ test.describe('Auth Mock — Auto-Redirect After Login', () => {
     // Simulate fresh sign-in
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
-    // Should redirect to inbox
-    await page.waitForURL(/inbox/, { timeout: 5000 });
-    expect(page.url()).toContain('inbox');
+    // Should stay on home page — auth UI updates in place
+    await page.waitForTimeout(2000);
+    expect(page.url()).not.toContain('inbox');
+    await expect(page.locator('#garden-signin')).toBeHidden();
+    await expect(page.locator('#garden-auth-user')).toBeVisible();
   });
 
-  test('returning user on front page does NOT redirect', async ({ page }) => {
+  test('returning user on front page stays on home page', async ({ page }) => {
     // Start signed in (wasSignedInOnLoad = true, no redirect)
     await injectMockAuth(page, MOCK_FIREBASE_USER);
     await page.goto('./');
@@ -810,7 +816,7 @@ test.describe('Auth Mock — Auto-Redirect After Login', () => {
     expect(page.url()).not.toContain('inbox');
   });
 
-  test('auto-redirect does not fire on non-front pages', async ({ page }) => {
+  test('signing in on non-front pages does not navigate away', async ({ page }) => {
     // Start signed out on board page
     await injectMockAuth(page, null);
     await page.goto('./docs/board/');
@@ -818,10 +824,10 @@ test.describe('Auth Mock — Auto-Redirect After Login', () => {
     // Wait for page to settle
     await page.waitForTimeout(500);
 
-    // Simulate sign-in — should NOT redirect (auto-redirect only on front page)
+    // Simulate sign-in — should stay on current page
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
-    // Wait to ensure no redirect
+    // Wait to ensure no navigation
     await page.waitForTimeout(1500);
 
     // Should still be on board page
