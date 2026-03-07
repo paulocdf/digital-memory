@@ -20,6 +20,19 @@ export default defineConfig({
       name: 'chromium',
       use: { browserName: 'chromium' },
     },
+    // Lightweight smoke suite for CI — critical paths only.
+    // Run locally with: npx playwright test --project=ci
+    // Full suite still available via: npx playwright test --project=chromium
+    {
+      name: 'ci',
+      use: { browserName: 'chromium' },
+      testMatch: [
+        'auth-persistence.spec.ts',
+        'landing-page.spec.ts',
+        'navigation.spec.ts',
+        'sidebar.spec.ts',
+      ],
+    },
   ],
 
   webServer: {
