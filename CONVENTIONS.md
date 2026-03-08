@@ -189,7 +189,7 @@ function calculateOrderForPosition(container, newIndex, itemId) {
 
 - **`serializeTodo()` is a field whitelist**: Any new todo field MUST be added here or it will be silently dropped during Firestore-to-IDB sync. This is the single most common source of bugs.
 - **`serializeNote()` same rule**: Must include `pinned`, `deletedAt`, and any new fields.
-- **`createTodo()` takes an options object**: `{ title, estimatedMin, parentId, scheduledDate, reminderAtMs, category, atTop, pomodoroCount, pomodoroLength, onDone, source, breakLength, bujoType, projectId }`. Previously used 13 positional parameters; refactored to named options for clarity.
+- **`createTodo()` takes an options object**: `{ title, estimatedMin, parentId, scheduledDate, reminderAtMs, category, atTop, pomodoroCount, pomodoroLength, onDone, source, breakLength, bujoType, projectId, color }`. Previously used 13 positional parameters; refactored to named options for clarity.
 
 ### marked.js
 
