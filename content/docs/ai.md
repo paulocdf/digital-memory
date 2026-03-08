@@ -1,6 +1,6 @@
 ---
 title: "AI"
-weight: 7
+weight: 8
 BookToC: false
 graph_exclude: true
 ---
