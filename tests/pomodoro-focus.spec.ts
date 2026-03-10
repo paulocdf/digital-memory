@@ -1,4 +1,4 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, Page } from '@playwright/test';
 
 test.describe('Pomodoro Focus Overlay', () => {
   test.beforeEach(async ({ page }) => {
@@ -156,5 +156,139 @@ test.describe('Pomodoro Focus Overlay', () => {
     // Also check the textarea has a space
     const value = await page.locator('#focus-notes-textarea').inputValue();
     expect(value).toContain(' ');
+  });
+});
+
+// ── Auto-advance setting tests ──
+// These tests verify that when auto-advance is OFF, the timer does NOT
+// auto-advance to the next subtask or auto-start the next phase.
+
+test.describe('Pomodoro Auto-Advance Setting', () => {
+  // Use a very short pomodoroLength (0.05 min = 3 seconds) so the timer completes quickly
+  const SHORT_POMO = 0.05;
+
+  /** Seed a parent task with two subtasks in IDB. */
+  async function seedSubtasks(page: Page) {
+    await page.evaluate(
+      ({ shortPomo }) => {
+        const dmSync = (window as any).dmSync;
+        const parent = {
+          id: 'auto-adv-parent',
+          userId: 'test-user',
+          title: 'Parent Task',
+          done: false,
+          status: 'active',
+          bujoType: 'task',
+          bujoState: 'open',
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        const sub1 = {
+          id: 'auto-adv-sub-1',
+          userId: 'test-user',
+          title: 'Subtask One',
+          parentId: 'auto-adv-parent',
+          order: 1,
+          done: false,
+          status: 'active',
+          bujoType: 'task',
+          bujoState: 'open',
+          pomodoroLength: shortPomo,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        const sub2 = {
+          id: 'auto-adv-sub-2',
+          userId: 'test-user',
+          title: 'Subtask Two',
+          parentId: 'auto-adv-parent',
+          order: 2,
+          done: false,
+          status: 'active',
+          bujoType: 'task',
+          bujoState: 'open',
+          pomodoroLength: shortPomo,
+          createdAt: Date.now(),
+          updatedAt: Date.now(),
+        };
+        return Promise.all([dmSync.putTodo(parent), dmSync.putTodo(sub1), dmSync.putTodo(sub2)]);
+      },
+      { shortPomo: SHORT_POMO }
+    );
+  }
+
+  /** Remove seeded test data from IDB. */
+  async function cleanupSubtasks(page: Page) {
+    await page.evaluate(() => {
+      const dmSync = (window as any).dmSync;
+      return Promise.all([
+        dmSync.deleteTodo('auto-adv-parent'),
+        dmSync.deleteTodo('auto-adv-sub-1'),
+        dmSync.deleteTodo('auto-adv-sub-2'),
+      ]);
+    });
+  }
+
+  test.beforeEach(async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => !!(window as any).dmPomodoro);
+    await page.waitForFunction(() => !!(window as any).dmSync && !!(window as any).dmSync.putTodo);
+    await seedSubtasks(page);
+  });
+
+  test.afterEach(async ({ page }) => {
+    await page.evaluate(() => {
+      try { (window as any).dmPomodoro.stop(); } catch (_) {}
+    });
+    await cleanupSubtasks(page);
+  });
+
+  test('subtask does NOT auto-advance when auto-advance is OFF', async ({ page }) => {
+    // Disable all auto-advance/auto-start settings
+    await page.evaluate(() => {
+      localStorage.setItem('dm-pomo-auto-advance', 'false');
+      localStorage.setItem('dm-pomo-auto-break', 'false');
+      localStorage.setItem('dm-pomo-auto-work', 'false');
+    });
+
+    // Start the timer on the first subtask (pomodoroLength is ~3 seconds)
+    await page.evaluate(() => {
+      (window as any).dmPomodoro.start('auto-adv-sub-1', 'Subtask One');
+    });
+    await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
+
+    // Verify we're timing the subtask
+    const activeTodo = await page.evaluate(() => (window as any).dmPomodoro.getActiveTodoId());
+    expect(activeTodo).toBe('auto-adv-sub-1');
+
+    // The timer should complete within a few seconds
+    // When auto-advance is OFF, the timer should CLOSE (not advance to sub-2)
+    await expect(page.locator('#pomodoro-focus-overlay')).toBeHidden({ timeout: 15000 });
+    await expect(page.locator('#pomodoro-timer')).toBeHidden({ timeout: 3000 });
+
+    // Verify the timer did NOT start on Subtask Two
+    const activeAfter = await page.evaluate(() => (window as any).dmPomodoro.getActiveTodoId());
+    expect(activeAfter).toBeNull();
+  });
+
+  test('subtask DOES auto-advance when auto-advance is ON', async ({ page }) => {
+    // Enable auto-advance
+    await page.evaluate(() => {
+      localStorage.setItem('dm-pomo-auto-advance', 'true');
+    });
+
+    // Start the timer on the first subtask (pomodoroLength is ~3 seconds)
+    await page.evaluate(() => {
+      (window as any).dmPomodoro.start('auto-adv-sub-1', 'Subtask One');
+    });
+    await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
+
+    // Wait for the timer to complete and auto-advance to sub-2
+    // The focus overlay should stay visible (timer transitions to next subtask)
+    await expect(page.locator('#focus-title')).toContainText('Subtask Two', { timeout: 15000 });
+
+    // Timer should still be active (paused on the next subtask)
+    const activeAfter = await page.evaluate(() => (window as any).dmPomodoro.getActiveTodoId());
+    expect(activeAfter).toBe('auto-adv-sub-2');
   });
 });
