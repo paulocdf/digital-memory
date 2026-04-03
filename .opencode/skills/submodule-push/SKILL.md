@@ -16,6 +16,20 @@ Guide you through the correct git push workflow for Digital Memory. This project
 
 ## Push Workflow
 
+### Step 0: Rebase on latest remote before committing
+
+Always do this first, before making any commit, to keep history linear:
+
+```bash
+# Parent repo
+git fetch origin && git rebase origin/main
+
+# Submodule
+git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master
+```
+
+If the rebase produces conflicts, resolve them before proceeding.
+
 ### Step 1: Commit in the submodule (if not already done)
 
 ```bash
@@ -28,7 +42,7 @@ git commit -m "your message"
 
 ```bash
 cd themes/hugo-book
-git push hugo-book master
+git push origin master
 ```
 
 ### Step 3: Update the parent's submodule pointer
@@ -52,7 +66,7 @@ git push origin main
 2. **The parent repo tracks the submodule commit hash** -- after committing in the submodule, the parent shows `themes/hugo-book` as modified. You must `git add themes/hugo-book` and commit in the parent.
 3. **CI/CD triggers on parent push** -- GitHub Actions runs Hugo build + Playwright tests + deploy to GitHub Pages.
 4. **Submodule branch is `master`**, parent branch is `main` -- don't mix them up.
-5. **Submodule remote is named `hugo-book`**, not `origin` -- verify with `git -C themes/hugo-book remote -v`.
+5. **Submodule remote is named `origin`** — verify with `git -C themes/hugo-book remote -v`.
 
 ## Verification
 

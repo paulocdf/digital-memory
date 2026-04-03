@@ -181,3 +181,6 @@ hugo server --disableFastRender
 6. **IndexedDB version must increment** for schema changes (add upgrade logic in `dm-sync.html` `onupgradeneeded`).
 7. **`baseURL` includes `/digital-memory/`** — all URLs are prefixed.
 8. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.
+9. **Rebase before committing** — before creating any commit, fetch and rebase on the latest remote branch to keep history linear and avoid merge conflicts:
+   - Parent repo: `git fetch origin && git rebase origin/main`
+   - Submodule: `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`
