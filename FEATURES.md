@@ -1,6 +1,6 @@
 # Digital Memory — Feature Reference
 
-Complete inventory of all features implemented in Digital Memory. For development guidance, see `AGENT.md`. For code patterns, see `CONVENTIONS.md`.
+Complete inventory of all features implemented in Digital Memory. For development guidance, see `AGENTS.md`. For code patterns, see `CONVENTIONS.md`.
 
 Last updated: 2026-02-28
 
@@ -8,7 +8,7 @@ Last updated: 2026-02-28
 
 ## 1. Task Management (Inbox)
 
-**Files**: `todo-list.html` (~6,360 lines), `todo-edit-modal.html` (~1,840 lines)
+**Files**: `todo-list.html` (~7,490 lines), `todo-edit-modal.html` (~2,480 lines)
 
 ### Core
 - Create, edit, delete, and reorder tasks
@@ -56,7 +56,7 @@ Last updated: 2026-02-28
 
 ## 2. Pomodoro Timer
 
-**File**: `pomodoro-timer.html` (~4,080 lines)
+**File**: `pomodoro-timer.html` (~5,570 lines)
 
 ### Core Timer
 - Floating draggable widget (fixed, bottom-right, 220px wide)
@@ -112,7 +112,7 @@ Last updated: 2026-02-28
 
 ## 3. Kanban Board
 
-**File**: `kanban-board.html` (~1,670 lines)
+**File**: `kanban-board.html` (~3,080 lines)
 
 - 3-column board: To Do, In Progress, Done
 - Drag-and-drop between columns via SortableJS with visual feedback (clone follows cursor, column highlights on dragover)
@@ -127,7 +127,7 @@ Last updated: 2026-02-28
 
 ## 4. Dashboard / Analytics
 
-**File**: `dashboard.html` (~820 lines)
+**File**: `dashboard.html` (~1,070 lines)
 
 ### Charts
 - **Donut chart**: Category breakdown of tracked time (D3.js)
@@ -148,7 +148,7 @@ Last updated: 2026-02-28
 
 ## 5. Knowledge Graph
 
-**File**: `graph.js` (~1,860 lines)
+**File**: `graph.js` (~1,930 lines)
 
 - D3.js force-directed graph on landing page
 - Nodes = notes, edges = wikilinks + title mentions
@@ -160,11 +160,11 @@ Last updated: 2026-02-28
 
 ## 6. Notes & Knowledge Base
 
-**Files**: `note-viewer.html` (~690 lines), `single-note.html` (~630 lines), `section-notes.html` (~470 lines)
+**Files**: `note-viewer.html` (~1,100 lines), `single-note.html` (~990 lines), `section-notes.html` (~530 lines)
 
 ### Organization
 - Four content sections: Books (flat), Topics (flat), Snippets (grouped by language), Inbox (single-note)
-- Tag system with dynamic tag cloud (`tag-cloud.html`, ~300 lines)
+- Tag system with dynamic tag cloud (`tag-cloud.html`, ~340 lines)
 - Note pinning (thumbtack icon, pinned notes sort first in sidebar)
 - Wikilinks `[[Note Title]]` with auto-resolution
 - Backlinks section ("Linked from") with explicit/mention badges
@@ -200,7 +200,7 @@ Last updated: 2026-02-28
 
 ## 7. Spaced Repetition / Review Queue
 
-**File**: `review-queue.html` (~840 lines)
+**File**: `review-queue.html` (~1,760 lines)
 
 - SM-2 algorithm (SuperMemo 2) with quality ratings 0-5
 - Flashcard UI: show title first, reveal content on click, then rate
@@ -214,7 +214,7 @@ Last updated: 2026-02-28
 
 ## 8. AI Companion
 
-**Files**: `ai-companion.html` (~2,260 lines), `ai-chat.html` (~1,280 lines)
+**Files**: `ai-companion.html` (~2,900 lines), `ai-chat.html` (~1,740 lines)
 
 ### Engine
 - In-browser LLM: Qwen2.5-0.5B-Instruct via WebLLM/WebGPU
@@ -273,9 +273,9 @@ Last updated: 2026-02-28
 
 ## 10. Data Sync Engine
 
-**File**: `dm-sync.html` (~3,100 lines)
+**File**: `dm-sync.html` (~3,980 lines)
 
-- IndexedDB as primary store (version 7, 8 object stores)
+- IndexedDB as primary store (version 14, 10 object stores)
 - Firestore as cloud sync layer
 - Offline-first with write queue (`firestoreWrite()`)
 - Client-side ID generation for offline-compatible creates
@@ -300,7 +300,7 @@ Last updated: 2026-02-28
 
 ## 12. Quick Capture
 
-**Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~3,980 lines)
+**Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~4,380 lines)
 
 - 4 modes: AI (default), Note, Code, Todo
 - Tab/Shift+Tab cycles modes
@@ -336,7 +336,7 @@ Last updated: 2026-02-28
 
 ## 15. Trash
 
-**File**: `trash-list.html` (~290 lines)
+**File**: `trash-list.html` (~700 lines)
 
 - Soft delete via `deletedAt` timestamp field
 - Restore, permanent delete, empty trash
@@ -347,7 +347,7 @@ Last updated: 2026-02-28
 
 ## 16. History (Calendar View)
 
-**File**: `note-history.html` (~880 lines)
+**File**: `note-history.html` (~910 lines)
 
 - Calendar grid view of past task activity
 - Closed days tracking

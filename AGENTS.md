@@ -49,24 +49,24 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 ### Core Engine
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/layouts/partials/dm-sync.html` | ~3,100 | Data sync engine: IndexedDB + Firestore sync, offline queue, ~40+ public methods via `window.dmSync` |
-| `themes/hugo-book/layouts/partials/docs/inject/head.html` | ~110 | Firebase SDK loading + initialization, auth setup |
-| `themes/hugo-book/layouts/partials/docs/html-head.html` | ~1,070 | SDK scripts, marked.js, highlight.js, SortableJS, utilities |
-| `themes/hugo-book/layouts/partials/docs/inject/body.html` | ~3,980 | Quick Capture modal logic, sidebar, ToC builder, sharing UI, settings panel |
+| `themes/hugo-book/layouts/partials/dm-sync.html` | ~3,980 | Data sync engine: IndexedDB + Firestore sync, offline queue, kanban columns, ~40+ public methods via `window.dmSync` |
+| `themes/hugo-book/layouts/partials/docs/inject/head.html` | ~250 | Firebase SDK loading + initialization, auth setup |
+| `themes/hugo-book/layouts/partials/docs/html-head.html` | ~1,060 | SDK scripts, marked.js, highlight.js, SortableJS, utilities |
+| `themes/hugo-book/layouts/partials/docs/inject/body.html` | ~4,380 | Quick Capture modal logic, sidebar, ToC builder, sharing UI, settings panel |
 
 ### Features
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/layouts/partials/todo-list.html` | ~6,360 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time, `window.dmTodoList` API |
-| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~4,080 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
-| `themes/hugo-book/layouts/shortcodes/kanban-board.html` | ~1,670 | Kanban board: 3 columns, drag-and-drop between columns |
-| `themes/hugo-book/layouts/shortcodes/dashboard.html` | ~820 | Analytics dashboard: charts, stat cards, time filters |
-| `themes/hugo-book/assets/js/graph.js` | ~1,860 | D3.js knowledge graph on landing page |
-| `themes/hugo-book/layouts/partials/ai-companion.html` | ~2,260 | AI engine: WebLLM, NLP parsing, voice input, task-aware system prompt |
-| `themes/hugo-book/layouts/shortcodes/ai-chat.html` | ~1,280 | Full-page AI chat interface |
-| `themes/hugo-book/layouts/shortcodes/review-queue.html` | ~1,230 | Spaced repetition: SM-2 algorithm, flashcard UI |
+| `themes/hugo-book/layouts/partials/todo-list.html` | ~7,490 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time, `window.dmTodoList` API |
+| `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~5,570 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
+| `themes/hugo-book/layouts/shortcodes/kanban-board.html` | ~3,080 | Kanban board: 3 columns, drag-and-drop between columns |
+| `themes/hugo-book/layouts/shortcodes/dashboard.html` | ~1,070 | Analytics dashboard: charts, stat cards, time filters |
+| `themes/hugo-book/assets/js/graph.js` | ~1,930 | D3.js knowledge graph on landing page |
+| `themes/hugo-book/layouts/partials/ai-companion.html` | ~2,900 | AI engine: WebLLM, NLP parsing, voice input, task-aware system prompt |
+| `themes/hugo-book/layouts/shortcodes/ai-chat.html` | ~1,740 | Full-page AI chat interface |
+| `themes/hugo-book/layouts/shortcodes/review-queue.html` | ~1,760 | Spaced repetition: SM-2 algorithm, flashcard UI |
 | `themes/hugo-book/layouts/partials/note-edit-modal.html` | ~1,270 | Note editor: toolbar, preview, tags, drag-drop upload |
-| `themes/hugo-book/layouts/partials/todo-edit-modal.html` | ~1,840 | Task edit modal: all task fields, sharing UI |
+| `themes/hugo-book/layouts/partials/todo-edit-modal.html` | ~2,480 | Task edit modal: all task fields, sharing UI |
 | `themes/hugo-book/layouts/partials/export-modal.html` | ~1,240 | Bulk & single-item export (ZIP via JSZip) |
 | `themes/hugo-book/layouts/partials/version-history-modal.html` | ~570 | Note version history with LCS diff |
 | `themes/hugo-book/layouts/partials/todo-complete-modal.html` | ~610 | Task completion modal |
@@ -77,9 +77,9 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | `themes/hugo-book/layouts/shortcodes/note-viewer.html` | ~1,100 | Single note viewer with backlinks |
 | `themes/hugo-book/layouts/shortcodes/single-note.html` | ~980 | Page-level note display |
 | `themes/hugo-book/layouts/shortcodes/section-notes.html` | ~520 | Section note listing (Books, Topics, Snippets) |
-| `themes/hugo-book/layouts/shortcodes/trash-list.html` | ~670 | Trash: restore, permanent delete, auto-purge 30 days |
+| `themes/hugo-book/layouts/shortcodes/trash-list.html` | ~700 | Trash: restore, permanent delete, auto-purge 30 days |
 | `themes/hugo-book/layouts/shortcodes/tag-cloud.html` | ~340 | Dynamic tag cloud |
-| `themes/hugo-book/layouts/shortcodes/note-history.html` | ~880 | Calendar view of task activity |
+| `themes/hugo-book/layouts/shortcodes/note-history.html` | ~910 | Calendar view of task activity |
 | `themes/hugo-book/layouts/shortcodes/graph.html` | ~60 | Knowledge graph shortcode |
 | `themes/hugo-book/layouts/shortcodes/garden-sections.html` | ~160 | Garden sections overview on landing page |
 | `themes/hugo-book/layouts/shortcodes/garden-stats.html` | ~80 | Garden statistics on landing page |
@@ -88,7 +88,7 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 ### Styles
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/assets/_custom.scss` | ~6,080 | All custom styles (sidebar, settings, Quick Capture, diagrams) |
+| `themes/hugo-book/assets/_custom.scss` | ~6,200 | All custom styles (sidebar, settings, Quick Capture, diagrams) |
 | `themes/hugo-book/assets/_defaults.scss` | — | CSS custom properties |
 | `themes/hugo-book/assets/scss/_graph.scss` | — | Graph-specific styles |
 | Inline in partials | — | Edit modal, todo-list action buttons, some component styles |
@@ -121,7 +121,7 @@ hugo server --disableFastRender
 3. For any data changes, use the `firestoreWrite()` dual-write pattern (see `CONVENTIONS.md`)
 4. If adding a new Firestore field to todos: **update `serializeTodo()` in `dm-sync.html`** (CRITICAL — fields not in this whitelist are silently dropped during sync)
 5. If adding a new Firestore field to notes: **update `serializeNote()` in `dm-sync.html`**
-6. If adding a new IDB object store: **increment the IDB version** (currently v12) and add upgrade logic
+6. If adding a new IDB object store: **increment the IDB version** (currently v14) and add upgrade logic
 7. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
 8. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`
 9. Update `FEATURES.md` with the new feature
@@ -180,4 +180,4 @@ hugo server --disableFastRender
 5. **Hugo parses `{{ }}` in `<script>` blocks** — avoid Go template syntax in JS code (e.g., JSDoc `@returns {{ field }}` will break the build).
 6. **IndexedDB version must increment** for schema changes (add upgrade logic in `dm-sync.html` `onupgradeneeded`).
 7. **`baseURL` includes `/digital-memory/`** — all URLs are prefixed.
-8. **Test manually** — there is no test infrastructure. Run `hugo server`, test in browser.
+8. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.

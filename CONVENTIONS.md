@@ -1,6 +1,6 @@
 # Digital Memory — Code Conventions
 
-> Patterns, rules, and gotchas for developing in this codebase. Read `AGENT.md` first for project orientation.
+> Patterns, rules, and gotchas for developing in this codebase. Read `AGENTS.md` first for project orientation.
 
 ## Code Organization
 
@@ -181,9 +181,9 @@ function calculateOrderForPosition(container, newIndex, itemId) {
 
 ### IndexedDB
 
-- **Version is currently 13**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
-- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos.
-- **9 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects.
+- **Version is currently 14**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
+- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store.
+- **10 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns.
 
 ### Data Sync
 
