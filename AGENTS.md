@@ -181,6 +181,10 @@ hugo server --disableFastRender
 6. **IndexedDB version must increment** for schema changes (add upgrade logic in `dm-sync.html` `onupgradeneeded`).
 7. **`baseURL` includes `/digital-memory/`** — all URLs are prefixed.
 8. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.
-9. **Rebase before committing** — before creating any commit, fetch and rebase on the latest remote branch to keep history linear and avoid merge conflicts:
-   - Parent repo: `git fetch origin && git rebase origin/main`
-   - Submodule: `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`
+9. **Rebase and merge into main before pushing** — we commit directly to `main` (no PRs for now). When a task is done:
+   - Rebase: `git fetch origin && git rebase origin/main` (submodule: `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`)
+   - Fast-forward merge: `git checkout main && git merge --ff-only <branch>` (submodule: `git -C themes/hugo-book checkout master && git -C themes/hugo-book merge --ff-only <branch>`)
+   - Push submodule first (if changed), then parent. See the `submodule-push` skill for the full workflow.
+   - **The task is NOT done until changes are on `main` and pushed to remote.** If the user hasn't asked to push yet, ask them. Load the `submodule-push` skill and execute its workflow.
+   - **Before starting a new task**, also sync both repos: `git fetch origin && git rebase origin/main` and `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`. Do not start coding on a stale branch.
+   - This will change in the future when we adopt pull requests.
