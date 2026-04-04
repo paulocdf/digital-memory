@@ -21,38 +21,33 @@ const DB_VERSION = 16;
 
 // ── Factories ──
 
-function makeNote(id: string, title: string, userId: string, opts: Record<string, any> = {}) {
+function makeProject(id: string, name: string, userId: string, opts: Record<string, any> = {}) {
   return {
     id,
-    title,
-    content: opts.content || 'Test note content for ' + title,
-    mode: opts.mode || 'note',
-    destination: opts.destination || 'inbox',
-    language: opts.language || null,
-    bookTitle: opts.bookTitle || null,
-    tags: opts.tags || [],
+    name,
+    color: opts.color || '#e8f5e9',
+    description: opts.description || '',
+    deadline: opts.deadline || null,
+    archived: opts.archived || false,
+    order: opts.order || 0,
     userId,
-    userEmail: opts.userEmail || 'owner@example.com',
-    userName: opts.userName || 'Owner User',
-    pinned: opts.pinned || false,
     collaborators: opts.collaborators || [userId],
-    deletedAt: null,
     createdAt: Date.now(),
     updatedAt: Date.now(),
     ...opts,
   };
 }
 
-function makeNoteShare(
-  noteId: string,
+function makeProjectShare(
+  projectId: string,
   inviteeUid: string,
   opts: Record<string, any> = {}
 ) {
-  const shareId = noteId + '_' + inviteeUid;
+  const shareId = projectId + '_' + inviteeUid;
   return {
     id: shareId,
-    noteId,
-    noteTitle: opts.noteTitle || 'Shared Note',
+    projectId,
+    projectName: opts.projectName || 'Shared Project',
     ownerId: opts.ownerId || MOCK_USER.uid,
     ownerEmail: opts.ownerEmail || MOCK_USER.email,
     ownerName: opts.ownerName || MOCK_USER.displayName,
@@ -67,13 +62,8 @@ function makeNoteShare(
 
 // ── Auth Mock ──
 
-/**
- * Inject mock Firebase Auth for a given user.
- * Mirrors the pattern from auth-persistence.spec.ts.
- */
 function injectMockAuth(page: Page, user: typeof MOCK_USER) {
   return page.addInitScript((u) => {
-    // Pre-populate cached user
     localStorage.setItem('dm-cached-user', JSON.stringify({
       displayName: u.displayName || '',
       email: u.email || '',
@@ -156,36 +146,36 @@ function injectMockAuth(page: Page, user: typeof MOCK_USER) {
 
 // ── IDB Helpers ──
 
-/** Seed a note directly into IDB. */
-async function seedNote(page: Page, note: Record<string, any>) {
+/** Seed a project directly into IDB. */
+async function seedProject(page: Page, project: Record<string, any>) {
   await page.evaluate(
-    ({ note, dbName, dbVersion }) => {
+    ({ project, dbName, dbVersion }) => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('notes', 'readwrite');
-          tx.objectStore('notes').put(note);
+          const tx = db.transaction('projects', 'readwrite');
+          tx.objectStore('projects').put(project);
           tx.oncomplete = () => { db.close(); resolve(); };
           tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
         };
         req.onerror = (e: any) => reject(e.target.error);
       });
     },
-    { note, dbName: DB_NAME, dbVersion: DB_VERSION }
+    { project, dbName: DB_NAME, dbVersion: DB_VERSION }
   );
 }
 
-/** Seed a noteShare directly into IDB. */
-async function seedNoteShare(page: Page, share: Record<string, any>) {
+/** Seed a projectShare directly into IDB. */
+async function seedProjectShare(page: Page, share: Record<string, any>) {
   await page.evaluate(
     ({ share, dbName, dbVersion }) => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('noteShares', 'readwrite');
-          tx.objectStore('noteShares').put(share);
+          const tx = db.transaction('projectShares', 'readwrite');
+          tx.objectStore('projectShares').put(share);
           tx.oncomplete = () => { db.close(); resolve(); };
           tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
         };
@@ -196,16 +186,16 @@ async function seedNoteShare(page: Page, share: Record<string, any>) {
   );
 }
 
-/** Read a noteShare from IDB by ID. */
-async function getNoteShareFromIdb(page: Page, shareId: string) {
+/** Read a projectShare from IDB by ID. */
+async function getProjectShareFromIdb(page: Page, shareId: string) {
   return page.evaluate(
     ({ shareId, dbName, dbVersion }) => {
       return new Promise<any>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('noteShares', 'readonly');
-          const getReq = tx.objectStore('noteShares').get(shareId);
+          const tx = db.transaction('projectShares', 'readonly');
+          const getReq = tx.objectStore('projectShares').get(shareId);
           getReq.onsuccess = () => { db.close(); resolve(getReq.result || null); };
           getReq.onerror = (e: any) => { db.close(); reject(e.target.error); };
         };
@@ -216,16 +206,16 @@ async function getNoteShareFromIdb(page: Page, shareId: string) {
   );
 }
 
-/** Read all noteShares from IDB. */
-async function getAllNoteSharesFromIdb(page: Page) {
+/** Read all projectShares from IDB. */
+async function getAllProjectSharesFromIdb(page: Page) {
   return page.evaluate(
     ({ dbName, dbVersion }) => {
       return new Promise<any[]>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('noteShares', 'readonly');
-          const getAll = tx.objectStore('noteShares').getAll();
+          const tx = db.transaction('projectShares', 'readonly');
+          const getAll = tx.objectStore('projectShares').getAll();
           getAll.onsuccess = () => { db.close(); resolve(getAll.result); };
           getAll.onerror = (e: any) => { db.close(); reject(e.target.error); };
         };
@@ -237,17 +227,17 @@ async function getAllNoteSharesFromIdb(page: Page) {
 }
 
 /** Clean up test data from IDB. */
-async function cleanupData(page: Page, noteIds: string[], shareIds: string[]) {
+async function cleanupData(page: Page, projectIds: string[], shareIds: string[]) {
   await page.evaluate(
-    ({ noteIds, shareIds, dbName, dbVersion }) => {
+    ({ projectIds, shareIds, dbName, dbVersion }) => {
       return new Promise<void>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction(['notes', 'noteShares'], 'readwrite');
-          const noteStore = tx.objectStore('notes');
-          const shareStore = tx.objectStore('noteShares');
-          noteIds.forEach((id: string) => noteStore.delete(id));
+          const tx = db.transaction(['projects', 'projectShares'], 'readwrite');
+          const projectStore = tx.objectStore('projects');
+          const shareStore = tx.objectStore('projectShares');
+          projectIds.forEach((id: string) => projectStore.delete(id));
           shareIds.forEach((id: string) => shareStore.delete(id));
           tx.oncomplete = () => { db.close(); resolve(); };
           tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
@@ -255,14 +245,22 @@ async function cleanupData(page: Page, noteIds: string[], shareIds: string[]) {
         req.onerror = (e: any) => reject(e.target.error);
       });
     },
-    { noteIds, shareIds, dbName: DB_NAME, dbVersion: DB_VERSION }
+    { projectIds, shareIds, dbName: DB_NAME, dbVersion: DB_VERSION }
   );
 }
 
-/** Wait for dmSync to be fully available. */
+/** Wait for dmSync to be fully available with project sharing methods. */
 async function waitForDmSync(page: Page) {
   await page.waitForFunction(
-    () => !!(window as any).dmSync && !!(window as any).dmSync.putNote && !!(window as any).dmSync.getSharesForNote,
+    () => !!(window as any).dmSync && !!(window as any).dmSync.getProject && !!(window as any).dmSync.getSharesForProject,
+    { timeout: 10000 }
+  );
+}
+
+/** Wait for the _pjTest test API to be available. */
+async function waitForPjTest(page: Page) {
+  await page.waitForFunction(
+    () => !!(window as any)._pjTest && !!(window as any)._pjTest.openModal,
     { timeout: 10000 }
   );
 }
@@ -271,103 +269,101 @@ async function waitForDmSync(page: Page) {
 // Tests
 // ═══════════════════════════════════════
 
-test.describe('Note Sharing — Data Layer', () => {
-  const NOTE_ID = 'ns-test-note-1';
-  const NOTE = makeNote(NOTE_ID, 'Test Sharing Note', MOCK_USER.uid);
-  const SHARE_ID = NOTE_ID + '_' + MOCK_COLLABORATOR.uid;
+test.describe('Project Sharing — Data Layer', () => {
+  const PROJECT_ID = 'ps-test-proj-1';
+  const PROJECT = makeProject(PROJECT_ID, 'Test Sharing Project', MOCK_USER.uid);
+  const SHARE_ID = PROJECT_ID + '_' + MOCK_COLLABORATOR.uid;
 
   test.beforeEach(async ({ page }) => {
     await injectMockAuth(page, MOCK_USER);
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
-    await seedNote(page, NOTE);
+    await seedProject(page, PROJECT);
   });
 
   test.afterEach(async ({ page }) => {
-    await cleanupData(page, [NOTE_ID], [SHARE_ID]);
+    await cleanupData(page, [PROJECT_ID], [SHARE_ID]);
   });
 
-  test('getSharesForNote returns empty array when no shares exist', async ({ page }) => {
-    const shares = await page.evaluate((noteId) => {
-      return (window as any).dmSync.getSharesForNote(noteId);
-    }, NOTE_ID);
+  test('getSharesForProject returns empty array when no shares exist', async ({ page }) => {
+    const shares = await page.evaluate((projectId) => {
+      return (window as any).dmSync.getSharesForProject(projectId);
+    }, PROJECT_ID);
 
     expect(shares).toEqual([]);
   });
 
-  test('seeded share is retrievable via getSharesForNote', async ({ page }) => {
-    const share = makeNoteShare(NOTE_ID, MOCK_COLLABORATOR.uid, {
-      noteTitle: NOTE.title,
+  test('seeded share is retrievable via getSharesForProject', async ({ page }) => {
+    const share = makeProjectShare(PROJECT_ID, MOCK_COLLABORATOR.uid, {
+      projectName: PROJECT.name,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    const shares = await page.evaluate((noteId) => {
-      return (window as any).dmSync.getSharesForNote(noteId);
-    }, NOTE_ID);
+    const shares = await page.evaluate((projectId) => {
+      return (window as any).dmSync.getSharesForProject(projectId);
+    }, PROJECT_ID);
 
     expect(shares).toHaveLength(1);
     expect(shares[0].id).toBe(SHARE_ID);
-    expect(shares[0].noteId).toBe(NOTE_ID);
+    expect(shares[0].projectId).toBe(PROJECT_ID);
     expect(shares[0].inviteeEmail).toBe(MOCK_COLLABORATOR.email);
     expect(shares[0].status).toBe('pending');
   });
 
-  test('getPendingNoteInvites returns pending shares for current user as invitee', async ({ page }) => {
-    // Seed a share where current user is the invitee
-    const share = makeNoteShare('ns-other-note', MOCK_USER.uid, {
-      noteTitle: 'Someone Else Note',
+  test('getPendingProjectInvites returns pending shares for current user as invitee', async ({ page }) => {
+    const share = makeProjectShare('ps-other-proj', MOCK_USER.uid, {
+      projectName: 'Someone Else Project',
       ownerId: 'other-owner-uid',
       ownerEmail: 'other@example.com',
       ownerName: 'Other Owner',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     const invites = await page.evaluate(() => {
-      return (window as any).dmSync.getPendingNoteInvites();
+      return (window as any).dmSync.getPendingProjectInvites();
     });
 
     expect(invites.length).toBeGreaterThanOrEqual(1);
     const found = invites.find((inv: any) => inv.id === share.id);
     expect(found).toBeTruthy();
     expect(found.status).toBe('pending');
-    expect(found.noteTitle).toBe('Someone Else Note');
+    expect(found.projectName).toBe('Someone Else Project');
 
-    // Cleanup extra share
-    await cleanupData(page, ['ns-other-note'], [share.id]);
+    await cleanupData(page, ['ps-other-proj'], [share.id]);
   });
 
-  test('getPendingNoteInvites excludes accepted shares', async ({ page }) => {
-    const share = makeNoteShare('ns-accepted-note', MOCK_USER.uid, {
-      noteTitle: 'Already Accepted',
+  test('getPendingProjectInvites excludes accepted shares', async ({ page }) => {
+    const share = makeProjectShare('ps-accepted-proj', MOCK_USER.uid, {
+      projectName: 'Already Accepted',
       ownerId: 'other-owner-uid',
       inviteeEmail: MOCK_USER.email,
       status: 'accepted',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     const invites = await page.evaluate(() => {
-      return (window as any).dmSync.getPendingNoteInvites();
+      return (window as any).dmSync.getPendingProjectInvites();
     });
 
     const found = invites.find((inv: any) => inv.id === share.id);
     expect(found).toBeFalsy();
 
-    await cleanupData(page, ['ns-accepted-note'], [share.id]);
+    await cleanupData(page, ['ps-accepted-proj'], [share.id]);
   });
 
-  test('getMyNoteShares returns shares owned by current user', async ({ page }) => {
-    const share = makeNoteShare(NOTE_ID, MOCK_COLLABORATOR.uid, {
-      noteTitle: NOTE.title,
+  test('getMyProjectShares returns shares owned by current user', async ({ page }) => {
+    const share = makeProjectShare(PROJECT_ID, MOCK_COLLABORATOR.uid, {
+      projectName: PROJECT.name,
       ownerId: MOCK_USER.uid,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     const myShares = await page.evaluate(() => {
-      return (window as any).dmSync.getMyNoteShares();
+      return (window as any).dmSync.getMyProjectShares();
     });
 
     expect(myShares.length).toBeGreaterThanOrEqual(1);
@@ -377,281 +373,281 @@ test.describe('Note Sharing — Data Layer', () => {
   });
 });
 
-test.describe('Note Sharing — Edit Modal UI', () => {
-  const NOTE_ID = 'ns-modal-note-1';
-  const NOTE = makeNote(NOTE_ID, 'Modal Sharing Note', MOCK_USER.uid);
-  const SHARE_ID = NOTE_ID + '_' + MOCK_COLLABORATOR.uid;
+test.describe('Project Sharing — Edit Modal UI', () => {
+  const PROJECT_ID = 'ps-modal-proj-1';
+  const PROJECT = makeProject(PROJECT_ID, 'Modal Sharing Project', MOCK_USER.uid);
+  const SHARE_ID = PROJECT_ID + '_' + MOCK_COLLABORATOR.uid;
 
   test.beforeEach(async ({ page }) => {
     await injectMockAuth(page, MOCK_USER);
-    await page.goto('./docs/inbox/');
+    await page.goto('./docs/projects/');
     await waitForDmSync(page);
-    await seedNote(page, NOTE);
+    await waitForPjTest(page);
+    await seedProject(page, PROJECT);
+    // Set the project in the test API so openModal can find it
+    await page.evaluate((proj) => {
+      (window as any)._pjTest.setProjects([proj]);
+    }, PROJECT);
   });
 
   test.afterEach(async ({ page }) => {
-    await cleanupData(page, [NOTE_ID], [SHARE_ID]);
+    await page.evaluate(() => {
+      (window as any)._pjTest.closeModal();
+    });
+    await cleanupData(page, [PROJECT_ID], [SHARE_ID]);
   });
 
   test('sharing section is visible when owner opens edit modal', async ({ page }) => {
-    // Open the edit modal with the test note
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
-    // The sharing section should be visible
-    const sharingSection = page.locator('#note-edit-sharing-section');
+    const sharingSection = page.locator('#project-share-section');
     await expect(sharingSection).toBeVisible();
 
-    // Share controls (email input + send button) should be visible for owner
-    const shareControls = page.locator('#note-edit-share-controls');
+    const shareControls = page.locator('#project-share-controls');
     await expect(shareControls).toBeVisible();
 
-    // Owner info banner should NOT be visible (user is the owner)
-    const ownerInfo = page.locator('#note-edit-share-owner-info');
+    const ownerInfo = page.locator('#project-share-owner-info');
     await expect(ownerInfo).not.toBeVisible();
   });
 
   test('sharing section shows email input and share button for owner', async ({ page }) => {
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
-    const emailInput = page.locator('#note-edit-share-email');
+    const emailInput = page.locator('#project-share-email');
     await expect(emailInput).toBeVisible();
     await expect(emailInput).toHaveAttribute('placeholder', 'Enter email to share...');
 
-    const sendBtn = page.locator('#note-edit-share-send');
+    const sendBtn = page.locator('#project-share-send');
     await expect(sendBtn).toBeVisible();
     await expect(sendBtn).toHaveText('Share');
   });
 
   test('sharing section shows "Not shared with anyone" when no shares exist', async ({ page }) => {
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
-    // Wait for share list to load
     await page.waitForTimeout(300);
 
-    const shareList = page.locator('#note-edit-share-list');
+    const shareList = page.locator('#project-share-list');
     await expect(shareList).toContainText('Not shared with anyone');
   });
 
   test('share list displays existing collaborators with status', async ({ page }) => {
-    // Seed a pending share
-    const share = makeNoteShare(NOTE_ID, MOCK_COLLABORATOR.uid, {
-      noteTitle: NOTE.title,
+    const share = makeProjectShare(PROJECT_ID, MOCK_COLLABORATOR.uid, {
+      projectName: PROJECT.name,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
-    // Wait for share list to render
     await page.waitForTimeout(500);
 
-    const shareItem = page.locator('.note-edit-share-item');
+    const shareItem = page.locator('.project-share-item');
     await expect(shareItem).toHaveCount(1);
 
-    const itemEmail = shareItem.locator('.note-edit-share-item-email');
+    const itemEmail = shareItem.locator('.project-share-item-email');
     await expect(itemEmail).toContainText(MOCK_COLLABORATOR.email);
 
-    const itemStatus = shareItem.locator('.note-edit-share-item-status');
+    const itemStatus = shareItem.locator('.project-share-item-status');
     await expect(itemStatus).toContainText('pending');
     await expect(itemStatus).toHaveClass(/status-pending/);
   });
 
   test('share list shows accepted status for accepted shares', async ({ page }) => {
-    const share = makeNoteShare(NOTE_ID, MOCK_COLLABORATOR.uid, {
-      noteTitle: NOTE.title,
+    const share = makeProjectShare(PROJECT_ID, MOCK_COLLABORATOR.uid, {
+      projectName: PROJECT.name,
       status: 'accepted',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
     await page.waitForTimeout(500);
 
-    const itemStatus = page.locator('.note-edit-share-item-status');
+    const itemStatus = page.locator('.project-share-item-status');
     await expect(itemStatus).toContainText('accepted');
     await expect(itemStatus).toHaveClass(/status-accepted/);
   });
 
   test('remove button is visible on share list items', async ({ page }) => {
-    const share = makeNoteShare(NOTE_ID, MOCK_COLLABORATOR.uid, {
-      noteTitle: NOTE.title,
+    const share = makeProjectShare(PROJECT_ID, MOCK_COLLABORATOR.uid, {
+      projectName: PROJECT.name,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
     await page.waitForTimeout(500);
 
-    const removeBtn = page.locator('.note-edit-share-item-remove');
+    const removeBtn = page.locator('.project-share-item-remove');
     await expect(removeBtn).toHaveCount(1);
-    await expect(removeBtn).toHaveAttribute('data-note-unshare-id', SHARE_ID);
+    await expect(removeBtn).toHaveAttribute('data-proj-unshare-id', SHARE_ID);
   });
 
   test('collaborator view shows owner info and hides share controls', async ({ page }) => {
-    // Open modal as a collaborator (note owned by someone else)
-    const collabNote = makeNote(NOTE_ID, 'Collab View Note', 'other-owner-uid', {
-      userEmail: 'other@example.com',
-      userName: 'Other Owner',
+    const collabProject = makeProject(PROJECT_ID, 'Collab View Project', 'other-owner-uid', {
       collaborators: ['other-owner-uid', MOCK_USER.uid],
     });
 
-    // Seed a share to provide owner info
-    const share = makeNoteShare(NOTE_ID, MOCK_USER.uid, {
-      noteTitle: collabNote.title,
+    const share = makeProjectShare(PROJECT_ID, MOCK_USER.uid, {
+      projectName: collabProject.name,
       ownerId: 'other-owner-uid',
       ownerEmail: 'other@example.com',
       ownerName: 'Other Owner',
       inviteeEmail: MOCK_USER.email,
       status: 'accepted',
     });
-    await seedNote(page, collabNote);
-    await seedNoteShare(page, share);
+    await seedProject(page, collabProject);
+    await seedProjectShare(page, share);
 
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, collabNote);
+    await page.evaluate((proj) => {
+      (window as any)._pjTest.setProjects([proj]);
+    }, collabProject);
+
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
     await page.waitForTimeout(500);
 
-    // Share controls should be hidden (not the owner)
-    const shareControls = page.locator('#note-edit-share-controls');
+    const shareControls = page.locator('#project-share-controls');
     await expect(shareControls).not.toBeVisible();
 
-    // Owner info should be visible
-    const ownerInfo = page.locator('#note-edit-share-owner-info');
+    const ownerInfo = page.locator('#project-share-owner-info');
     await expect(ownerInfo).toBeVisible();
     await expect(ownerInfo).toContainText('Other Owner');
 
     await cleanupData(page, [], [share.id]);
   });
 
-  test('closing and reopening modal resets sharing state', async ({ page }) => {
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
-
-    await page.waitForTimeout(300);
-    const sharingSection = page.locator('#note-edit-sharing-section');
-    await expect(sharingSection).toBeVisible();
-
-    // Close
+  test('sharing section is hidden in create mode', async ({ page }) => {
+    // Open modal with no projectId = create mode
     await page.evaluate(() => {
-      (window as any).dmEditModal.close();
+      (window as any)._pjTest.openModal(null);
     });
 
-    // Sharing section should be hidden now
+    const sharingSection = page.locator('#project-share-section');
+    await expect(sharingSection).not.toBeVisible();
+  });
+
+  test('closing and reopening modal resets sharing state', async ({ page }) => {
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
+
+    await page.waitForTimeout(300);
+    const sharingSection = page.locator('#project-share-section');
+    await expect(sharingSection).toBeVisible();
+
+    await page.evaluate(() => {
+      (window as any)._pjTest.closeModal();
+    });
+
     await expect(sharingSection).not.toBeVisible();
 
-    // Reopen
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
     await page.waitForTimeout(300);
     await expect(sharingSection).toBeVisible();
-    await expect(page.locator('#note-edit-share-list')).toContainText('Not shared with anyone');
+    await expect(page.locator('#project-share-list')).toContainText('Not shared with anyone');
   });
 
   test('sharing section header shows people icon and "Sharing" label', async ({ page }) => {
-    await page.evaluate((note) => {
-      (window as any).dmEditModal.open(note);
-    }, NOTE);
+    await page.evaluate((id) => {
+      (window as any)._pjTest.openModal(id);
+    }, PROJECT_ID);
 
-    const header = page.locator('.note-edit-sharing-header');
+    const header = page.locator('.project-share-header');
     await expect(header).toBeVisible();
     await expect(header).toContainText('Sharing');
 
-    // SVG icon should be present
     const icon = header.locator('svg');
     await expect(icon).toBeAttached();
   });
 });
 
-test.describe('Note Sharing — Invitation Banners', () => {
-  const NOTE_ID = 'ns-invite-note-1';
-  const SHARE_ID = NOTE_ID + '_' + MOCK_USER.uid;
+test.describe('Project Sharing — Invitation Banners', () => {
+  const PROJECT_ID = 'ps-invite-proj-1';
+  const SHARE_ID = PROJECT_ID + '_' + MOCK_USER.uid;
 
   test.beforeEach(async ({ page }) => {
     await injectMockAuth(page, MOCK_USER);
   });
 
   test.afterEach(async ({ page }) => {
-    await cleanupData(page, [NOTE_ID], [SHARE_ID]);
+    await cleanupData(page, [PROJECT_ID], [SHARE_ID]);
   });
 
-  test('pending note invitation renders a banner card', async ({ page }) => {
+  test('pending project invitation renders a banner card', async ({ page }) => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    // Seed a pending note share invitation for the current user
-    const share = makeNoteShare(NOTE_ID, MOCK_USER.uid, {
-      noteTitle: 'Invited Note Title',
+    const share = makeProjectShare(PROJECT_ID, MOCK_USER.uid, {
+      projectName: 'Invited Project Title',
       ownerId: 'other-owner-uid',
       ownerEmail: 'sharer@example.com',
       ownerName: 'Sharer Person',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    // Trigger the invitation load by dispatching the event
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
 
-    // Wait for the banner to render
     await page.waitForTimeout(1000);
 
-    const banner = page.locator('#dm-note-invitations-banner');
+    const banner = page.locator('#dm-project-invitations-banner');
     const card = banner.locator('.dm-invitation-card');
     await expect(card).toHaveCount(1);
 
-    // Should show "Note Shared With You"
     const header = card.locator('.dm-invitation-header');
-    await expect(header).toContainText('Note Shared With You');
+    await expect(header).toContainText('Project Shared With You');
 
-    // Should show the sharer's name
     const body = card.locator('.dm-invitation-body');
     await expect(body).toContainText('Sharer Person');
-    await expect(body).toContainText('shared a note');
-    await expect(body).toContainText('Invited Note Title');
+    await expect(body).toContainText('shared a project');
+    await expect(body).toContainText('Invited Project Title');
   });
 
   test('accept and decline buttons are present on invitation card', async ({ page }) => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    const share = makeNoteShare(NOTE_ID, MOCK_USER.uid, {
-      noteTitle: 'Buttons Test Note',
+    const share = makeProjectShare(PROJECT_ID, MOCK_USER.uid, {
+      projectName: 'Buttons Test Project',
       ownerId: 'other-owner-uid',
       ownerEmail: 'sharer@example.com',
       ownerName: 'Sharer',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
     await page.waitForTimeout(1000);
 
-    const card = page.locator('#dm-note-invitations-banner .dm-invitation-card');
-    const acceptBtn = card.locator('[data-note-accept-id]');
-    const declineBtn = card.locator('[data-note-decline-id]');
+    const card = page.locator('#dm-project-invitations-banner .dm-invitation-card');
+    const acceptBtn = card.locator('[data-project-accept-id]');
+    const declineBtn = card.locator('[data-project-decline-id]');
 
     await expect(acceptBtn).toHaveCount(1);
     await expect(acceptBtn).toHaveText('Accept');
@@ -663,43 +659,39 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    const share = makeNoteShare(NOTE_ID, MOCK_USER.uid, {
-      noteTitle: 'Dismiss Test',
+    const share = makeProjectShare(PROJECT_ID, MOCK_USER.uid, {
+      projectName: 'Dismiss Test',
       ownerId: 'other-owner-uid',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
     await page.waitForTimeout(1000);
 
-    const card = page.locator('#dm-note-invitations-banner .dm-invitation-card');
+    const card = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(card).toHaveCount(1);
 
-    // Click dismiss
-    const dismissBtn = card.locator('[data-note-dismiss-id]');
+    const dismissBtn = card.locator('[data-project-dismiss-id]');
     await dismissBtn.click();
 
-    // Card should be removed after animation
     await page.waitForTimeout(300);
     await expect(card).toHaveCount(0);
   });
 
-  test('no banner is shown when there are no pending note invitations', async ({ page }) => {
+  test('no banner is shown when there are no pending project invitations', async ({ page }) => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    // Trigger load with no pending shares
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
     await page.waitForTimeout(500);
 
-    const banner = page.locator('#dm-note-invitations-banner');
-    // Banner should be empty (no cards)
+    const banner = page.locator('#dm-project-invitations-banner');
     const cards = banner.locator('.dm-invitation-card');
     await expect(cards).toHaveCount(0);
   });
@@ -708,21 +700,20 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    // Seed an already-accepted share
-    const share = makeNoteShare(NOTE_ID, MOCK_USER.uid, {
-      noteTitle: 'Already Accepted Note',
+    const share = makeProjectShare(PROJECT_ID, MOCK_USER.uid, {
+      projectName: 'Already Accepted Project',
       ownerId: 'other-owner-uid',
       inviteeEmail: MOCK_USER.email,
       status: 'accepted',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
     await page.waitForTimeout(1000);
 
-    const cards = page.locator('#dm-note-invitations-banner .dm-invitation-card');
+    const cards = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(0);
   });
 
@@ -730,50 +721,49 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
 
-    const share1 = makeNoteShare('ns-multi-1', MOCK_USER.uid, {
-      noteTitle: 'First Shared Note',
+    const share1 = makeProjectShare('ps-multi-1', MOCK_USER.uid, {
+      projectName: 'First Shared Project',
       ownerId: 'owner-a',
       ownerName: 'Alice',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    const share2 = makeNoteShare('ns-multi-2', MOCK_USER.uid, {
-      noteTitle: 'Second Shared Note',
+    const share2 = makeProjectShare('ps-multi-2', MOCK_USER.uid, {
+      projectName: 'Second Shared Project',
       ownerId: 'owner-b',
       ownerName: 'Bob',
       inviteeEmail: MOCK_USER.email,
       status: 'pending',
     });
-    await seedNoteShare(page, share1);
-    await seedNoteShare(page, share2);
+    await seedProjectShare(page, share1);
+    await seedProjectShare(page, share2);
 
     await page.evaluate(() => {
-      window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
+      window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
     await page.waitForTimeout(1000);
 
-    const cards = page.locator('#dm-note-invitations-banner .dm-invitation-card');
+    const cards = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(2);
 
-    // Clean up extra shares
-    await cleanupData(page, ['ns-multi-1', 'ns-multi-2'], [share1.id, share2.id]);
+    await cleanupData(page, ['ps-multi-1', 'ps-multi-2'], [share1.id, share2.id]);
   });
 });
 
-test.describe('Note Sharing — IDB Schema', () => {
+test.describe('Project Sharing — IDB Schema', () => {
   test.beforeEach(async ({ page }) => {
     await injectMockAuth(page, MOCK_USER);
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
   });
 
-  test('noteShares object store exists in IDB', async ({ page }) => {
+  test('projectShares object store exists in IDB', async ({ page }) => {
     const hasStore = await page.evaluate(({ dbName, dbVersion }) => {
       return new Promise<boolean>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const has = db.objectStoreNames.contains('noteShares');
+          const has = db.objectStoreNames.contains('projectShares');
           db.close();
           resolve(has);
         };
@@ -784,14 +774,14 @@ test.describe('Note Sharing — IDB Schema', () => {
     expect(hasStore).toBe(true);
   });
 
-  test('noteShares store has required indexes', async ({ page }) => {
+  test('projectShares store has required indexes', async ({ page }) => {
     const indexes = await page.evaluate(({ dbName, dbVersion }) => {
       return new Promise<string[]>((resolve, reject) => {
         const req = indexedDB.open(dbName, dbVersion);
         req.onsuccess = () => {
           const db = req.result;
-          const tx = db.transaction('noteShares', 'readonly');
-          const store = tx.objectStore('noteShares');
+          const tx = db.transaction('projectShares', 'readonly');
+          const store = tx.objectStore('projectShares');
           const names: string[] = [];
           for (let i = 0; i < store.indexNames.length; i++) {
             names.push(store.indexNames[i]);
@@ -803,72 +793,72 @@ test.describe('Note Sharing — IDB Schema', () => {
       });
     }, { dbName: DB_NAME, dbVersion: DB_VERSION });
 
-    expect(indexes).toContain('noteId');
+    expect(indexes).toContain('projectId');
     expect(indexes).toContain('ownerId');
     expect(indexes).toContain('inviteeEmail');
     expect(indexes).toContain('status');
   });
 
-  test('note serialization includes collaborators field', async ({ page }) => {
-    const note = makeNote('ns-collab-field', 'Collab Field Test', MOCK_USER.uid, {
+  test('project serialization includes collaborators field', async ({ page }) => {
+    const project = makeProject('ps-collab-field', 'Collab Field Test', MOCK_USER.uid, {
       collaborators: [MOCK_USER.uid, 'other-uid'],
     });
-    await seedNote(page, note);
+    await seedProject(page, project);
 
-    const stored = await page.evaluate((noteId) => {
-      return (window as any).dmSync.getNote(noteId);
-    }, 'ns-collab-field');
+    const stored = await page.evaluate((projectId) => {
+      return (window as any).dmSync.getProject(projectId);
+    }, 'ps-collab-field');
 
     expect(stored).toBeTruthy();
     expect(stored.collaborators).toEqual([MOCK_USER.uid, 'other-uid']);
 
-    await cleanupData(page, ['ns-collab-field'], []);
+    await cleanupData(page, ['ps-collab-field'], []);
   });
 
-  test('noteShare can be written and read from IDB', async ({ page }) => {
-    const share = makeNoteShare('ns-idb-rw', MOCK_COLLABORATOR.uid, {
-      noteTitle: 'IDB Read Write',
+  test('projectShare can be written and read from IDB', async ({ page }) => {
+    const share = makeProjectShare('ps-idb-rw', MOCK_COLLABORATOR.uid, {
+      projectName: 'IDB Read Write',
     });
-    await seedNoteShare(page, share);
+    await seedProjectShare(page, share);
 
-    const result = await getNoteShareFromIdb(page, share.id);
+    const result = await getProjectShareFromIdb(page, share.id);
     expect(result).toBeTruthy();
     expect(result.id).toBe(share.id);
-    expect(result.noteId).toBe('ns-idb-rw');
-    expect(result.noteTitle).toBe('IDB Read Write');
+    expect(result.projectId).toBe('ps-idb-rw');
+    expect(result.projectName).toBe('IDB Read Write');
     expect(result.inviteeUid).toBe(MOCK_COLLABORATOR.uid);
 
-    await cleanupData(page, ['ns-idb-rw'], [share.id]);
+    await cleanupData(page, ['ps-idb-rw'], [share.id]);
   });
 });
 
-test.describe('Note Sharing — Public API Surface', () => {
+test.describe('Project Sharing — Public API Surface', () => {
   test.beforeEach(async ({ page }) => {
     await injectMockAuth(page, MOCK_USER);
     await page.goto('./docs/inbox/');
     await waitForDmSync(page);
   });
 
-  test('dmSync exposes all note sharing methods', async ({ page }) => {
+  test('dmSync exposes all project sharing methods', async ({ page }) => {
     const methods = await page.evaluate(() => {
       const sync = (window as any).dmSync;
       return {
-        shareNote: typeof sync.shareNote,
-        acceptNoteShare: typeof sync.acceptNoteShare,
-        declineNoteShare: typeof sync.declineNoteShare,
-        unshareNote: typeof sync.unshareNote,
-        getSharesForNote: typeof sync.getSharesForNote,
-        getPendingNoteInvites: typeof sync.getPendingNoteInvites,
-        getMyNoteShares: typeof sync.getMyNoteShares,
+        shareProject: typeof sync.shareProject,
+        acceptProjectShare: typeof sync.acceptProjectShare,
+        declineProjectShare: typeof sync.declineProjectShare,
+        unshareProject: typeof sync.unshareProject,
+        getSharesForProject: typeof sync.getSharesForProject,
+        getPendingProjectInvites: typeof sync.getPendingProjectInvites,
+        getMyProjectShares: typeof sync.getMyProjectShares,
       };
     });
 
-    expect(methods.shareNote).toBe('function');
-    expect(methods.acceptNoteShare).toBe('function');
-    expect(methods.declineNoteShare).toBe('function');
-    expect(methods.unshareNote).toBe('function');
-    expect(methods.getSharesForNote).toBe('function');
-    expect(methods.getPendingNoteInvites).toBe('function');
-    expect(methods.getMyNoteShares).toBe('function');
+    expect(methods.shareProject).toBe('function');
+    expect(methods.acceptProjectShare).toBe('function');
+    expect(methods.declineProjectShare).toBe('function');
+    expect(methods.unshareProject).toBe('function');
+    expect(methods.getSharesForProject).toBe('function');
+    expect(methods.getPendingProjectInvites).toBe('function');
+    expect(methods.getMyProjectShares).toBe('function');
   });
 });

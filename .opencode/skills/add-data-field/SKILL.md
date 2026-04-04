@@ -43,7 +43,7 @@ Same as todos, but:
 
 ## Checklist: Adding a New Object Store
 
-1. **Increment `DB_VERSION`** in `dm-sync.html` (currently v15)
+1. **Increment `DB_VERSION`** in `dm-sync.html` (currently v16)
 2. **Add store creation** in `onupgradeneeded` handler
 3. **Add CRUD methods** (`putXxx`, `getXxx`, `getAllXxx`, `deleteXxx`)
 4. **Add serializer function** if it needs Firestore sync
