@@ -17,7 +17,7 @@ const MOCK_COLLABORATOR = {
 };
 
 const DB_NAME = 'dm-notes';
-const DB_VERSION = 16;
+const DB_VERSION = 15;
 
 // ── Factories ──
 

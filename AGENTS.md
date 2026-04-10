@@ -49,17 +49,18 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 ### Core Engine
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/layouts/partials/dm-sync.html` | ~3,980 | Data sync engine: IndexedDB + Firestore sync, offline queue, kanban columns, ~40+ public methods via `window.dmSync` |
+| `themes/hugo-book/layouts/partials/dm-sync.html` | ~4,530 | Data sync engine: IndexedDB + Firestore sync, offline queue, kanban columns, ~40+ public methods via `window.dmSync` |
 | `themes/hugo-book/layouts/partials/docs/inject/head.html` | ~250 | Firebase SDK loading + initialization, auth setup |
 | `themes/hugo-book/layouts/partials/docs/html-head.html` | ~1,060 | SDK scripts, marked.js, highlight.js, SortableJS, utilities |
-| `themes/hugo-book/layouts/partials/docs/inject/body.html` | ~4,380 | Quick Capture modal logic, sidebar, ToC builder, sharing UI, settings panel |
+| `themes/hugo-book/layouts/partials/docs/inject/body.html` | ~4,520 | Quick Capture modal logic, sidebar, ToC builder, sharing UI, settings panel |
 
 ### Features
 | File | Lines | Description |
 |------|-------|-------------|
-| `themes/hugo-book/layouts/partials/todo-list.html` | ~7,490 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time, `window.dmTodoList` API |
+| `themes/hugo-book/layouts/partials/todo-list.html` | ~9,780 | Task management (Inbox): CRUD, subtasks, BuJo, drag-and-drop, finish time, `window.dmTodoList` API |
 | `themes/hugo-book/layouts/partials/pomodoro-timer.html` | ~5,570 | Pomodoro timer: floating widget, Focus/Zen mode, ambient visualizer, cross-device sync |
 | `themes/hugo-book/layouts/shortcodes/kanban-board.html` | ~3,080 | Kanban board: 3 columns, drag-and-drop between columns |
+| `themes/hugo-book/layouts/shortcodes/project-list.html` | ~3,530 | Project management: CRUD, task lists, sharing, inline pomodoro, click-to-edit |
 | `themes/hugo-book/layouts/shortcodes/dashboard.html` | ~1,070 | Analytics dashboard: charts, stat cards, time filters |
 | `themes/hugo-book/assets/js/graph.js` | ~1,930 | D3.js knowledge graph on landing page |
 | `themes/hugo-book/layouts/partials/ai-companion.html` | ~2,900 | AI engine: WebLLM, NLP parsing, voice input, task-aware system prompt |
@@ -102,7 +103,7 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | `content/menu/index.md` | Sidebar navigation menu |
 
 ### Content Pages (`content/docs/`)
-`board.md`, `dashboard.md`, `ai.md`, `review.md`, `history.md`, `tags.md`, `trash.md`, `view.md`, `import-notes.md`, `inbox/_index.md`, `books/_index.md`, `topics/_index.md`, `snippets/_index.md`
+`board.md`, `dashboard.md`, `ai.md`, `review.md`, `history.md`, `tags.md`, `trash.md`, `view.md`, `import-notes.md`, `projects.md`, `inbox/_index.md`, `books/_index.md`, `topics/_index.md`, `snippets/_index.md`
 
 ## How to Develop
 
@@ -121,7 +122,7 @@ hugo server --disableFastRender
 3. For any data changes, use the `firestoreWrite()` dual-write pattern (see `CONVENTIONS.md`)
 4. If adding a new Firestore field to todos: **update `serializeTodo()` in `dm-sync.html`** (CRITICAL — fields not in this whitelist are silently dropped during sync)
 5. If adding a new Firestore field to notes: **update `serializeNote()` in `dm-sync.html`**
-6. If adding a new IDB object store: **increment the IDB version** (currently v14) and add upgrade logic
+6. If adding a new IDB object store: **increment the IDB version** (currently v15) and add upgrade logic
 7. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
 8. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`
 9. Update `FEATURES.md` with the new feature
@@ -149,7 +150,7 @@ hugo server --disableFastRender
 
 | API | Purpose |
 |-----|---------|
-| `window.dmSync` | Data layer: CRUD for notes, todos, review cards, attachments, task shares. ~40+ methods |
+| `window.dmSync` | Data layer: CRUD for notes, todos, review cards, attachments, task shares, project shares. ~40+ methods |
 | `window.dmPomodoro` | Timer: `start()`, `stop()`, `finish()`, `next()`, `reset()`, `pause()`, `resume()`, `togglePause()`, `isActive()`, `isTimerRunning()`, `getActiveTodoId()`, `getSessionInfo()`, `getTaskProgress(todoId)`, `clearTaskProgress(todoId)`, `getStartedAt()` |
 | `window.dmTodoList` | Task list queries: `getNextTask(todoId)` — returns next undone task in same day group |
 | `window.dmSounds` | Sound system: `play(soundId, volume)`, `presets`, `getVolume()` |

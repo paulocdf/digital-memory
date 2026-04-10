@@ -97,6 +97,7 @@ Components communicate via custom DOM events on `document`:
 | `dm-ai-load-progress` | `ai-companion.html` | `{ progress }` | AI model download progress |
 | `dm-ai-create-task` | `ai-companion.html` | `{ title, scheduledDate, estimatedMin, category, projectId }` | AI suggested a task to create |
 | `dm-projects-updated` | `dm-sync.html` | none | Projects changed; re-render project lists |
+| `dm-project-shares-updated` | `dm-sync.html` | none | Project shares changed; re-render invitation banners |
 
 **Listening:**
 ```javascript
@@ -181,9 +182,9 @@ function calculateOrderForPosition(container, newIndex, itemId) {
 
 ### IndexedDB
 
-- **Version is currently 14**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
-- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store.
-- **10 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns.
+- **Version is currently 15**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
+- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store, v14->15 projectShares store.
+- **11 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns, projectShares.
 
 ### Data Sync
 

@@ -2,7 +2,7 @@
 
 Complete inventory of all features implemented in Digital Memory. For development guidance, see `AGENTS.md`. For code patterns, see `CONVENTIONS.md`.
 
-Last updated: 2026-02-28
+Last updated: 2026-04-10
 
 ---
 
@@ -271,11 +271,49 @@ Last updated: 2026-02-28
 
 ---
 
-## 10. Data Sync Engine
+## 10. Project Sharing
 
-**File**: `dm-sync.html` (~3,980 lines)
+**Files**: `dm-sync.html`, `project-list.html`, `body.html`, `firestore.rules`
 
-- IndexedDB as primary store (version 14, 10 object stores)
+### Architecture
+- Same hybrid client-side + security rules approach as task sharing (no Cloud Functions)
+- Deterministic share IDs: `{projectId}_{inviteeUid}`
+- `projectShares` IDB store with indexes on `projectId`, `ownerId`, `inviteeEmail`, `status`
+- Invitee self-sufficient: can accept and modify shared projects even when owner is offline
+
+### Flow
+1. Owner shares by email -> creates `projectShares` doc with `status: 'pending'`
+2. Invitee sees invitation via real-time `onSnapshot` listener -> banner with Accept/Decline/Dismiss
+3. Invitee accepts -> updates share status (direct Firestore write) + adds self to project's `collaborators` array + batch-adds self to all existing project tasks' `collaborators` arrays
+4. Owner notified via `onSnapshot` listener on their project shares
+5. New tasks created in shared projects automatically include all project collaborators
+
+### Task Propagation
+- **On accept**: collaborator batch-added to all existing project tasks
+- **On new task**: all project collaborators auto-included in `collaborators` array (in `todo-list.html`, `project-list.html`, `kanban-board.html`)
+- **On unshare**: collaborator batch-removed from all project tasks
+
+### UI
+- **Project edit modal**: sharing section with email input, share button, collaborator list with status badges and remove buttons; owner info for non-owners; hidden in create mode
+- **Invitation banner**: `#dm-project-invitations-banner` in `body.html` with Accept/Decline/Dismiss buttons
+
+### Permissions
+- Owner: full CRUD on project and shares
+- Collaborator: read + update project fields (except `userId`, `collaborators`)
+- Invitee pre-accept: can only update share status
+
+### Key Implementation Details
+- `acceptProjectShare()` uses direct Firestore writes (not `firestoreWrite()`) because the security rule checks that share status is already `'accepted'` in Firestore before allowing collaborator array update
+- `syncProjects()` queries both `userId ==` and `collaborators array-contains` to fetch shared projects
+- 3 real-time `onSnapshot` listeners: project share invites, owner project shares, shared projects
+
+---
+
+## 11. Data Sync Engine
+
+**File**: `dm-sync.html` (~4,530 lines)
+
+- IndexedDB as primary store (version 15, 11 object stores)
 - Firestore as cloud sync layer
 - Offline-first with write queue (`firestoreWrite()`)
 - Client-side ID generation for offline-compatible creates
@@ -286,7 +324,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 11. Authentication
+## 12. Authentication
 
 **Files**: `head.html`, all shortcodes
 
@@ -298,9 +336,9 @@ Last updated: 2026-02-28
 
 ---
 
-## 12. Quick Capture
+## 13. Quick Capture
 
-**Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~4,380 lines)
+**Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~4,520 lines)
 
 - 4 modes: AI (default), Note, Code, Todo
 - Tab/Shift+Tab cycles modes
@@ -311,7 +349,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 13. Search
+## 14. Search
 
 **File**: `search.js` (~380 lines)
 
@@ -324,7 +362,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 14. Export
+## 15. Export
 
 **File**: `export-modal.html` (~1,240 lines)
 
@@ -334,7 +372,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 15. Trash
+## 16. Trash
 
 **File**: `trash-list.html` (~700 lines)
 
@@ -345,7 +383,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 16. History (Calendar View)
+## 17. History (Calendar View)
 
 **File**: `note-history.html` (~910 lines)
 
@@ -355,7 +393,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 17. Settings
+## 18. Settings
 
 **File**: `body.html` (sidebar panel)
 
@@ -369,7 +407,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 18. PWA / Installability
+## 19. PWA / Installability
 
 **Files**: `manifest.json`, `sw.js`, `sw-register.js`
 
@@ -381,7 +419,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 19. Keyboard Shortcuts
+## 20. Keyboard Shortcuts
 
 **File**: `keyboard-shortcuts.html`
 
@@ -414,7 +452,7 @@ Last updated: 2026-02-28
 
 ---
 
-## 20. Diagrams
+## 21. Diagrams
 
 **Files**: `html-head.html`, `_custom.scss`
 
