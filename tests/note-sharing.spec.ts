@@ -1,269 +1,38 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import {
+  MOCK_USER,
+  MOCK_COLLABORATOR,
+  injectMockAuth,
+  seedNote,
+  seedNoteShare,
+  cleanupIdb,
+  getIdbRecord,
+  getAllIdbRecords,
+  makeNote,
+  makeNoteShare,
+} from './helpers';
 
-// ── Constants ──
+// ── Helpers ──
 
-const MOCK_USER = {
-  uid: 'test-user-owner',
-  displayName: 'Owner User',
-  email: 'owner@example.com',
-  photoURL: 'https://example.com/owner.png',
-};
-
-const MOCK_COLLABORATOR = {
-  uid: 'test-user-collab',
-  displayName: 'Collab User',
-  email: 'collab@example.com',
-  photoURL: 'https://example.com/collab.png',
-};
-
-const DB_NAME = 'dm-notes';
-const DB_VERSION = 16;
-
-// ── Factories ──
-
-function makeNote(id: string, title: string, userId: string, opts: Record<string, any> = {}) {
-  return {
-    id,
-    title,
-    content: opts.content || 'Test note content for ' + title,
-    mode: opts.mode || 'note',
-    destination: opts.destination || 'inbox',
-    language: opts.language || null,
-    bookTitle: opts.bookTitle || null,
-    tags: opts.tags || [],
-    userId,
-    userEmail: opts.userEmail || 'owner@example.com',
-    userName: opts.userName || 'Owner User',
-    pinned: opts.pinned || false,
-    collaborators: opts.collaborators || [userId],
-    deletedAt: null,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...opts,
-  };
+/** Clean up test data from both stores in one call. */
+async function cleanupData(page: Parameters<typeof cleanupIdb>[0], noteIds: string[], shareIds: string[]) {
+  await cleanupIdb(page, 'notes', noteIds);
+  await cleanupIdb(page, 'noteShares', shareIds);
 }
 
-function makeNoteShare(
-  noteId: string,
-  inviteeUid: string,
-  opts: Record<string, any> = {}
-) {
-  const shareId = noteId + '_' + inviteeUid;
-  return {
-    id: shareId,
-    noteId,
-    noteTitle: opts.noteTitle || 'Shared Note',
-    ownerId: opts.ownerId || MOCK_USER.uid,
-    ownerEmail: opts.ownerEmail || MOCK_USER.email,
-    ownerName: opts.ownerName || MOCK_USER.displayName,
-    inviteeEmail: opts.inviteeEmail || MOCK_COLLABORATOR.email,
-    inviteeUid,
-    status: opts.status || 'pending',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...opts,
-  };
-}
+const getNoteShareFromIdb = (page: Parameters<typeof getIdbRecord>[0], shareId: string) =>
+  getIdbRecord(page, 'noteShares', shareId);
 
-// ── Auth Mock ──
+const getAllNoteSharesFromIdb = (page: Parameters<typeof getAllIdbRecords>[0]) =>
+  getAllIdbRecords(page, 'noteShares');
 
-/**
- * Inject mock Firebase Auth for a given user.
- * Mirrors the pattern from auth-persistence.spec.ts.
- */
-function injectMockAuth(page: Page, user: typeof MOCK_USER) {
-  return page.addInitScript((u) => {
-    // Pre-populate cached user
-    localStorage.setItem('dm-cached-user', JSON.stringify({
-      displayName: u.displayName || '',
-      email: u.email || '',
-      photoURL: u.photoURL || '',
-    }));
-
-    (window as any)._mockAuthSubscribers = [] as Array<(user: any) => void>;
-    (window as any)._mockAuthCurrentUser = u;
-
-    (window as any)._mockAuthEmit = function(newUser: any) {
-      (window as any)._mockAuthCurrentUser = newUser;
-      try {
-        if (newUser) {
-          localStorage.setItem('dm-cached-user', JSON.stringify({
-            displayName: newUser.displayName || '',
-            email: newUser.email || '',
-            photoURL: newUser.photoURL || '',
-          }));
-        } else {
-          localStorage.removeItem('dm-cached-user');
-        }
-      } catch(e) {}
-      var subs = (window as any)._mockAuthSubscribers;
-      for (var i = 0; i < subs.length; i++) {
-        subs[i](newUser);
-      }
-    };
-
-    var mockAuth = {
-      get currentUser() { return (window as any)._mockAuthCurrentUser; },
-      onAuthStateChanged: function(callback: (user: any) => void) {
-        (window as any)._mockAuthSubscribers.push(callback);
-        var currentUser = (window as any)._mockAuthCurrentUser;
-        setTimeout(function() { callback(currentUser); }, 0);
-        return function() {
-          var subs = (window as any)._mockAuthSubscribers;
-          var idx = subs.indexOf(callback);
-          if (idx >= 0) subs.splice(idx, 1);
-        };
-      },
-      signOut: function() {
-        (window as any)._mockAuthEmit(null);
-        return Promise.resolve();
-      },
-      signInWithCredential: function() {
-        (window as any)._mockAuthEmit(u);
-        return Promise.resolve({ user: u });
-      },
-      signInWithPopup: function() { return Promise.resolve({ user: null }); },
-      signInWithRedirect: function() { return Promise.resolve(); },
-      getRedirectResult: function() { return Promise.resolve(null); },
-    };
-
-    var _mockAuth = mockAuth;
-    Object.defineProperty(window, 'dmAuth', {
-      get() { return _mockAuth; },
-      set() {},
-      configurable: true,
-    });
-
-    var _dmDb: any = null;
-    Object.defineProperty(window, 'dmDb', {
-      get() { return _dmDb; },
-      set(v) { _dmDb = v; },
-      configurable: true,
-    });
-
-    Object.defineProperty(window, 'dmSignIn', {
-      get() { return function() { mockAuth.signInWithCredential(); }; },
-      set() {},
-      configurable: true,
-    });
-    Object.defineProperty(window, 'dmRegisterUser', {
-      get() { return function() {}; },
-      set() {},
-      configurable: true,
-    });
-  }, user);
-}
-
-// ── IDB Helpers ──
-
-/** Seed a note directly into IDB. */
-async function seedNote(page: Page, note: Record<string, any>) {
-  await page.evaluate(
-    ({ note, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('notes', 'readwrite');
-          tx.objectStore('notes').put(note);
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { note, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Seed a noteShare directly into IDB. */
-async function seedNoteShare(page: Page, share: Record<string, any>) {
-  await page.evaluate(
-    ({ share, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('noteShares', 'readwrite');
-          tx.objectStore('noteShares').put(share);
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { share, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Read a noteShare from IDB by ID. */
-async function getNoteShareFromIdb(page: Page, shareId: string) {
-  return page.evaluate(
-    ({ shareId, dbName, dbVersion }) => {
-      return new Promise<any>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('noteShares', 'readonly');
-          const getReq = tx.objectStore('noteShares').get(shareId);
-          getReq.onsuccess = () => { db.close(); resolve(getReq.result || null); };
-          getReq.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { shareId, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Read all noteShares from IDB. */
-async function getAllNoteSharesFromIdb(page: Page) {
-  return page.evaluate(
-    ({ dbName, dbVersion }) => {
-      return new Promise<any[]>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('noteShares', 'readonly');
-          const getAll = tx.objectStore('noteShares').getAll();
-          getAll.onsuccess = () => { db.close(); resolve(getAll.result); };
-          getAll.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Clean up test data from IDB. */
-async function cleanupData(page: Page, noteIds: string[], shareIds: string[]) {
-  await page.evaluate(
-    ({ noteIds, shareIds, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction(['notes', 'noteShares'], 'readwrite');
-          const noteStore = tx.objectStore('notes');
-          const shareStore = tx.objectStore('noteShares');
-          noteIds.forEach((id: string) => noteStore.delete(id));
-          shareIds.forEach((id: string) => shareStore.delete(id));
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { noteIds, shareIds, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Wait for dmSync to be fully available. */
-async function waitForDmSync(page: Page) {
+/** Wait for dmSync + note-sharing methods to be available. */
+async function waitForDmSync(page: Parameters<typeof cleanupIdb>[0]) {
   await page.waitForFunction(
-    () => !!(window as any).dmSync && !!(window as any).dmSync.putNote && !!(window as any).dmSync.getSharesForNote,
-    { timeout: 10000 }
+    () => !!(window as any).dmSync &&
+          !!(window as any).dmSync.putNote &&
+          !!(window as any).dmSync.getSharesForNote,
+    { timeout: 10000 },
   );
 }
 

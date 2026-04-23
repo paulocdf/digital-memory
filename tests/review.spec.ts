@@ -1,25 +1,16 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import {
+  seedIdb,
+  cleanupIdb,
+  makeReviewCard,
+} from './helpers';
 
 // ── Test data ──
 
 const CARD_IDS = ['rv-card-1', 'rv-card-2', 'rv-card-3'];
 
 function makeCard(id: string, front: string, back: string, opts: Record<string, any> = {}) {
-  return {
-    id,
-    front,
-    back,
-    tags: [],
-    userId: 'test-user',
-    easeFactor: 2.5,
-    interval: 0,
-    repetitions: 0,
-    nextReviewAt: Date.now() - 1000, // due now
-    lastReviewedAt: null,
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...opts,
-  };
+  return makeReviewCard(id, front, back, { userId: 'test-user', ...opts });
 }
 
 const CARDS = [
@@ -31,43 +22,17 @@ const CARDS = [
 // ── Helpers ──
 
 /** Seed IDB with review cards. */
-async function seedCards(page: Page, cards = CARDS) {
-  await page.evaluate((cards) => {
-    return new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open('dm-notes', 16);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction('reviewCards', 'readwrite');
-        const store = tx.objectStore('reviewCards');
-        cards.forEach((c: any) => store.put(c));
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-      };
-      req.onerror = (e: any) => reject(e.target.error);
-    });
-  }, cards);
+async function seedCards(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
+  await seedIdb(page, 'reviewCards', cards);
 }
 
 /** Remove seeded test cards from IDB. */
-async function cleanupCards(page: Page, cardIds = CARD_IDS) {
-  await page.evaluate((ids) => {
-    return new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open('dm-notes', 16);
-      req.onsuccess = () => {
-        const db = req.result;
-        const tx = db.transaction('reviewCards', 'readwrite');
-        const store = tx.objectStore('reviewCards');
-        ids.forEach((id: string) => store.delete(id));
-        tx.oncomplete = () => { db.close(); resolve(); };
-        tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-      };
-      req.onerror = (e: any) => reject(e.target.error);
-    });
-  }, cardIds);
+async function cleanupCards(page: Parameters<typeof cleanupIdb>[0], cardIds = CARD_IDS) {
+  await cleanupIdb(page, 'reviewCards', cardIds);
 }
 
 /** Navigate to review page, seed cards, and trigger loadQueue. */
-async function setupReview(page: Page, cards = CARDS) {
+async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
   await page.goto('./docs/review/');
   await page.waitForFunction(() => !!(window as any).dmSync);
   await seedCards(page, cards);
@@ -77,7 +42,7 @@ async function setupReview(page: Page, cards = CARDS) {
 }
 
 /** Navigate to review page with no cards seeded. */
-async function setupEmpty(page: Page) {
+async function setupEmpty(page: Parameters<typeof cleanupIdb>[0]) {
   await page.goto('./docs/review/');
   await page.waitForFunction(() => !!(window as any).dmSync);
   // Clean any leftover cards
@@ -90,7 +55,7 @@ async function setupEmpty(page: Page) {
  *  Firebase Auth's `currentUser` is a getter on the prototype, so a plain
  *  assignment is silently ignored.  We use Object.defineProperty to override
  *  the getter on the instance itself. */
-async function mockAuth(page: Page) {
+async function mockAuth(page: Parameters<typeof cleanupIdb>[0]) {
   await page.evaluate(() => {
     const auth = (window as any).dmAuth;
     if (auth) {

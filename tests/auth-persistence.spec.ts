@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { MOCK_FIREBASE_USER, injectMockAuth } from './helpers';
 
 /**
  * Auth persistence and login flow tests.
@@ -14,14 +15,6 @@ import { test, expect, Page } from '@playwright/test';
  */
 
 const MOCK_USER = {
-  displayName: 'Test User',
-  email: 'test@example.com',
-  photoURL: 'https://example.com/avatar.png',
-};
-
-/** Mock Firebase user object with uid (used by injectMockAuth). */
-const MOCK_FIREBASE_USER = {
-  uid: 'test-uid-123',
   displayName: 'Test User',
   email: 'test@example.com',
   photoURL: 'https://example.com/avatar.png',
@@ -60,134 +53,6 @@ function injectCachedUserAndFreezeAuth(page: Page) {
       configurable: true,
     });
   }, MOCK_USER);
-}
-
-/**
- * Inject a fully controllable mock Firebase Auth into the page.
- *
- * Replaces window.dmAuth with a mock that provides:
- * - onAuthStateChanged(cb) — registers listeners, fires asynchronously
- * - signOut() — emits null to all listeners
- * - signInWithCredential() — resolves with the initial user (GIS flow)
- * - currentUser — tracks the current user
- * - window._mockAuthEmit(user) — test hook to trigger state transitions
- * - window._mockAuthSubscribers — array of registered listeners
- *
- * Also replaces dmSignIn and dmRegisterUser with no-ops, and lets
- * head.html's waitForAuthState() and dmAuthReady work naturally since
- * they call onAuthStateChanged on the mock.
- *
- * @param page - Playwright Page
- * @param initialUser - The user to emit on first onAuthStateChanged call.
- *                      Pass null for signed-out state.
- */
-function injectMockAuth(page: Page, initialUser: typeof MOCK_FIREBASE_USER | null) {
-  return page.addInitScript((user) => {
-    // Pre-populate dm-cached-user if initial user is provided
-    if (user) {
-      localStorage.setItem('dm-cached-user', JSON.stringify({
-        displayName: user.displayName || '',
-        email: user.email || '',
-        photoURL: user.photoURL || '',
-      }));
-    } else {
-      localStorage.removeItem('dm-cached-user');
-    }
-
-    // Track subscribers and current user state
-    (window as any)._mockAuthSubscribers = [] as Array<(user: any) => void>;
-    (window as any)._mockAuthCurrentUser = user;
-
-    // Emit a user state to all subscribers
-    (window as any)._mockAuthEmit = function(newUser: any) {
-      (window as any)._mockAuthCurrentUser = newUser;
-      // Update dm-cached-user just like the real auth flow does
-      try {
-        if (newUser) {
-          localStorage.setItem('dm-cached-user', JSON.stringify({
-            displayName: newUser.displayName || '',
-            email: newUser.email || '',
-            photoURL: newUser.photoURL || '',
-          }));
-        } else {
-          localStorage.removeItem('dm-cached-user');
-        }
-      } catch(e) {}
-      var subs = (window as any)._mockAuthSubscribers;
-      for (var i = 0; i < subs.length; i++) {
-        subs[i](newUser);
-      }
-    };
-
-    // Build the mock auth object
-    var mockAuth = {
-      get currentUser() {
-        return (window as any)._mockAuthCurrentUser;
-      },
-      onAuthStateChanged: function(callback: (user: any) => void) {
-        (window as any)._mockAuthSubscribers.push(callback);
-        // Fire asynchronously with current user (like real Firebase)
-        var currentUser = (window as any)._mockAuthCurrentUser;
-        setTimeout(function() { callback(currentUser); }, 0);
-        // Return unsubscribe function
-        return function() {
-          var subs = (window as any)._mockAuthSubscribers;
-          var idx = subs.indexOf(callback);
-          if (idx >= 0) subs.splice(idx, 1);
-        };
-      },
-      signOut: function() {
-        (window as any)._mockAuthEmit(null);
-        return Promise.resolve();
-      },
-      signInWithCredential: function() {
-        // Simulate GIS sign-in with the initial user
-        var u = user || {
-          uid: 'test-uid-123',
-          displayName: 'Test User',
-          email: 'test@example.com',
-          photoURL: 'https://example.com/avatar.png',
-        };
-        (window as any)._mockAuthEmit(u);
-        return Promise.resolve({ user: u });
-      },
-      // Keep legacy methods as no-ops for compatibility
-      signInWithPopup: function() { return Promise.resolve({ user: null }); },
-      signInWithRedirect: function() { return Promise.resolve(); },
-      getRedirectResult: function() { return Promise.resolve(null); },
-    };
-
-    // Intercept dmAuth assignment via Object.defineProperty.
-    // head.html does: window.dmAuth = firebase.auth();
-    // We intercept the set and replace with our mock.
-    var _mockAuth = mockAuth;
-    Object.defineProperty(window, 'dmAuth', {
-      get() { return _mockAuth; },
-      set() { /* swallow the real firebase.auth() assignment */ },
-      configurable: true,
-    });
-
-    // Also intercept dmDb/dmStorage/dmGoogleProvider to prevent errors
-    // when dm-sync.html tries to use Firestore
-    var _dmDb: any = null;
-    Object.defineProperty(window, 'dmDb', {
-      get() { return _dmDb; },
-      set(v) { _dmDb = v; },
-      configurable: true,
-    });
-
-    // Replace dmSignIn and dmRegisterUser with no-ops
-    Object.defineProperty(window, 'dmSignIn', {
-      get() { return function() { mockAuth.signInWithCredential(); }; },
-      set() {},
-      configurable: true,
-    });
-    Object.defineProperty(window, 'dmRegisterUser', {
-      get() { return function() {}; },
-      set() {},
-      configurable: true,
-    });
-  }, initialUser);
 }
 
 test.describe('Auth Persistence — Cached User Flash Prevention', () => {

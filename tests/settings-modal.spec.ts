@@ -1,18 +1,24 @@
 import { test, expect } from '@playwright/test';
+import { MOCK_USER, injectMockAuth, waitForDmSync } from './helpers';
 
-// The settings modal is created dynamically by JavaScript after Firebase authentication.
-// Without auth, neither the #sidebar-settings-toggle trigger nor the .settings-modal-overlay
-// exist in the DOM. These tests are skipped when running without authentication.
+/**
+ * Settings modal tests.
+ *
+ * The settings panel lives in body.html and is rendered into the sidebar
+ * after auth resolves. We inject a mock auth user so the panel initialises
+ * without needing real Firebase credentials.
+ *
+ * The panel reads/writes only localStorage, so no IDB seeding is needed.
+ */
 
 test.describe('Settings Modal', () => {
   test.beforeEach(async ({ page }) => {
+    await injectMockAuth(page, MOCK_USER);
     await page.goto('./');
-    // Check if the settings modal infrastructure exists (requires auth to initialize)
-    const hasSettings = await page.evaluate(() =>
-      typeof (window as any).openSettingsModal === 'function' &&
-      !!document.querySelector('.settings-modal-overlay')
-    );
-    test.skip(!hasSettings, 'Settings modal requires authentication to initialize');
+    await waitForDmSync(page);
+
+    // Wait for the settings toggle to appear (rendered after auth resolves)
+    await page.waitForSelector('#sidebar-settings-toggle', { timeout: 10_000 });
   });
 
   test('settings trigger is visible in sidebar', async ({ page }) => {
@@ -110,5 +116,13 @@ test.describe('Settings Modal', () => {
     await expect(page.locator('.settings-modal-overlay')).toHaveClass(/settings-modal-visible/);
 
     await expect(page.locator('#setting-ai-enabled')).toBeAttached();
+  });
+
+  test('Escape key closes the modal', async ({ page }) => {
+    await page.evaluate(() => (window as any).openSettingsModal());
+    await expect(page.locator('.settings-modal-overlay')).toHaveClass(/settings-modal-visible/);
+
+    await page.keyboard.press('Escape');
+    await expect(page.locator('.settings-modal-overlay')).not.toHaveClass(/settings-modal-visible/);
   });
 });

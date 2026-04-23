@@ -1,267 +1,46 @@
-import { test, expect, Page } from '@playwright/test';
+import { test, expect } from '@playwright/test';
+import {
+  MOCK_USER,
+  MOCK_COLLABORATOR,
+  injectMockAuth,
+  seedProject,
+  seedProjectShare,
+  cleanupIdb,
+  getIdbRecord,
+  getAllIdbRecords,
+  makeProject,
+  makeProjectShare,
+} from './helpers';
 
-// ── Constants ──
+// ── Helpers ──
 
-const MOCK_USER = {
-  uid: 'test-user-owner',
-  displayName: 'Owner User',
-  email: 'owner@example.com',
-  photoURL: 'https://example.com/owner.png',
-};
-
-const MOCK_COLLABORATOR = {
-  uid: 'test-user-collab',
-  displayName: 'Collab User',
-  email: 'collab@example.com',
-  photoURL: 'https://example.com/collab.png',
-};
-
-const DB_NAME = 'dm-notes';
-const DB_VERSION = 15;
-
-// ── Factories ──
-
-function makeProject(id: string, name: string, userId: string, opts: Record<string, any> = {}) {
-  return {
-    id,
-    name,
-    color: opts.color || '#e8f5e9',
-    description: opts.description || '',
-    deadline: opts.deadline || null,
-    archived: opts.archived || false,
-    order: opts.order || 0,
-    userId,
-    collaborators: opts.collaborators || [userId],
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...opts,
-  };
+/** Clean up test data from both stores in one call. */
+async function cleanupData(page: Parameters<typeof cleanupIdb>[0], projectIds: string[], shareIds: string[]) {
+  await cleanupIdb(page, 'projects', projectIds);
+  await cleanupIdb(page, 'projectShares', shareIds);
 }
 
-function makeProjectShare(
-  projectId: string,
-  inviteeUid: string,
-  opts: Record<string, any> = {}
-) {
-  const shareId = projectId + '_' + inviteeUid;
-  return {
-    id: shareId,
-    projectId,
-    projectName: opts.projectName || 'Shared Project',
-    ownerId: opts.ownerId || MOCK_USER.uid,
-    ownerEmail: opts.ownerEmail || MOCK_USER.email,
-    ownerName: opts.ownerName || MOCK_USER.displayName,
-    inviteeEmail: opts.inviteeEmail || MOCK_COLLABORATOR.email,
-    inviteeUid,
-    status: opts.status || 'pending',
-    createdAt: Date.now(),
-    updatedAt: Date.now(),
-    ...opts,
-  };
-}
+const getProjectShareFromIdb = (page: Parameters<typeof getIdbRecord>[0], shareId: string) =>
+  getIdbRecord(page, 'projectShares', shareId);
 
-// ── Auth Mock ──
+const getAllProjectSharesFromIdb = (page: Parameters<typeof getAllIdbRecords>[0]) =>
+  getAllIdbRecords(page, 'projectShares');
 
-function injectMockAuth(page: Page, user: typeof MOCK_USER) {
-  return page.addInitScript((u) => {
-    localStorage.setItem('dm-cached-user', JSON.stringify({
-      displayName: u.displayName || '',
-      email: u.email || '',
-      photoURL: u.photoURL || '',
-    }));
-
-    (window as any)._mockAuthSubscribers = [] as Array<(user: any) => void>;
-    (window as any)._mockAuthCurrentUser = u;
-
-    (window as any)._mockAuthEmit = function(newUser: any) {
-      (window as any)._mockAuthCurrentUser = newUser;
-      try {
-        if (newUser) {
-          localStorage.setItem('dm-cached-user', JSON.stringify({
-            displayName: newUser.displayName || '',
-            email: newUser.email || '',
-            photoURL: newUser.photoURL || '',
-          }));
-        } else {
-          localStorage.removeItem('dm-cached-user');
-        }
-      } catch(e) {}
-      var subs = (window as any)._mockAuthSubscribers;
-      for (var i = 0; i < subs.length; i++) {
-        subs[i](newUser);
-      }
-    };
-
-    var mockAuth = {
-      get currentUser() { return (window as any)._mockAuthCurrentUser; },
-      onAuthStateChanged: function(callback: (user: any) => void) {
-        (window as any)._mockAuthSubscribers.push(callback);
-        var currentUser = (window as any)._mockAuthCurrentUser;
-        setTimeout(function() { callback(currentUser); }, 0);
-        return function() {
-          var subs = (window as any)._mockAuthSubscribers;
-          var idx = subs.indexOf(callback);
-          if (idx >= 0) subs.splice(idx, 1);
-        };
-      },
-      signOut: function() {
-        (window as any)._mockAuthEmit(null);
-        return Promise.resolve();
-      },
-      signInWithCredential: function() {
-        (window as any)._mockAuthEmit(u);
-        return Promise.resolve({ user: u });
-      },
-      signInWithPopup: function() { return Promise.resolve({ user: null }); },
-      signInWithRedirect: function() { return Promise.resolve(); },
-      getRedirectResult: function() { return Promise.resolve(null); },
-    };
-
-    var _mockAuth = mockAuth;
-    Object.defineProperty(window, 'dmAuth', {
-      get() { return _mockAuth; },
-      set() {},
-      configurable: true,
-    });
-
-    var _dmDb: any = null;
-    Object.defineProperty(window, 'dmDb', {
-      get() { return _dmDb; },
-      set(v) { _dmDb = v; },
-      configurable: true,
-    });
-
-    Object.defineProperty(window, 'dmSignIn', {
-      get() { return function() { mockAuth.signInWithCredential(); }; },
-      set() {},
-      configurable: true,
-    });
-    Object.defineProperty(window, 'dmRegisterUser', {
-      get() { return function() {}; },
-      set() {},
-      configurable: true,
-    });
-  }, user);
-}
-
-// ── IDB Helpers ──
-
-/** Seed a project directly into IDB. */
-async function seedProject(page: Page, project: Record<string, any>) {
-  await page.evaluate(
-    ({ project, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('projects', 'readwrite');
-          tx.objectStore('projects').put(project);
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { project, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Seed a projectShare directly into IDB. */
-async function seedProjectShare(page: Page, share: Record<string, any>) {
-  await page.evaluate(
-    ({ share, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('projectShares', 'readwrite');
-          tx.objectStore('projectShares').put(share);
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { share, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Read a projectShare from IDB by ID. */
-async function getProjectShareFromIdb(page: Page, shareId: string) {
-  return page.evaluate(
-    ({ shareId, dbName, dbVersion }) => {
-      return new Promise<any>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('projectShares', 'readonly');
-          const getReq = tx.objectStore('projectShares').get(shareId);
-          getReq.onsuccess = () => { db.close(); resolve(getReq.result || null); };
-          getReq.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { shareId, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Read all projectShares from IDB. */
-async function getAllProjectSharesFromIdb(page: Page) {
-  return page.evaluate(
-    ({ dbName, dbVersion }) => {
-      return new Promise<any[]>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction('projectShares', 'readonly');
-          const getAll = tx.objectStore('projectShares').getAll();
-          getAll.onsuccess = () => { db.close(); resolve(getAll.result); };
-          getAll.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Clean up test data from IDB. */
-async function cleanupData(page: Page, projectIds: string[], shareIds: string[]) {
-  await page.evaluate(
-    ({ projectIds, shareIds, dbName, dbVersion }) => {
-      return new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open(dbName, dbVersion);
-        req.onsuccess = () => {
-          const db = req.result;
-          const tx = db.transaction(['projects', 'projectShares'], 'readwrite');
-          const projectStore = tx.objectStore('projects');
-          const shareStore = tx.objectStore('projectShares');
-          projectIds.forEach((id: string) => projectStore.delete(id));
-          shareIds.forEach((id: string) => shareStore.delete(id));
-          tx.oncomplete = () => { db.close(); resolve(); };
-          tx.onerror = (e: any) => { db.close(); reject(e.target.error); };
-        };
-        req.onerror = (e: any) => reject(e.target.error);
-      });
-    },
-    { projectIds, shareIds, dbName: DB_NAME, dbVersion: DB_VERSION }
-  );
-}
-
-/** Wait for dmSync to be fully available with project sharing methods. */
-async function waitForDmSync(page: Page) {
+/** Wait for dmSync + project-sharing methods to be available. */
+async function waitForDmSync(page: Parameters<typeof cleanupIdb>[0]) {
   await page.waitForFunction(
-    () => !!(window as any).dmSync && !!(window as any).dmSync.getProject && !!(window as any).dmSync.getSharesForProject,
-    { timeout: 10000 }
+    () => !!(window as any).dmSync &&
+          !!(window as any).dmSync.getProject &&
+          !!(window as any).dmSync.getSharesForProject,
+    { timeout: 10000 },
   );
 }
 
 /** Wait for the _pjTest test API to be available. */
-async function waitForPjTest(page: Page) {
+async function waitForPjTest(page: Parameters<typeof cleanupIdb>[0]) {
   await page.waitForFunction(
     () => !!(window as any)._pjTest && !!(window as any)._pjTest.openModal,
-    { timeout: 10000 }
+    { timeout: 10000 },
   );
 }
 

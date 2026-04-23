@@ -27,11 +27,18 @@ export default defineConfig({
       name: 'ci',
       use: { browserName: 'chromium' },
       testMatch: [
+        // Auth & navigation
         'auth-persistence.spec.ts',
         'auth-login-flows.spec.ts',
         'landing-page.spec.ts',
         'navigation.spec.ts',
         'sidebar.spec.ts',
+        // Core features
+        'review.spec.ts',
+        'pomodoro-timer.spec.ts',
+        'quick-capture.spec.ts',
+        'inbox-tasks.spec.ts',
+        'notes-crud.spec.ts',
       ],
     },
   ],
