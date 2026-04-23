@@ -25,7 +25,48 @@ If the working tree has uncommitted changes from a previous task, commit or stas
 
 ## IMPORTANT: When a task is complete
 
-**When the user confirms the task is done, or says "push", "ship it", "we're done", or similar, you MUST execute the full workflow below.** Do NOT just edit files and tell the user the task is finished — the task is NOT finished until the changes are committed, rebased onto `main`, merged into `main`, and pushed to the remote. If the user has not explicitly asked to push yet, ask them if they'd like you to commit and push.
+**When the user confirms the task is done, or says "push", "ship it", "we're done", or similar, you MUST execute the full workflow below.** Do NOT just edit files and tell the user the task is finished — the task is NOT finished until the changes are squashed into a single commit, rebased onto `main`, merged into `main`, and pushed to the remote. If the user has not explicitly asked to push yet, ask them if they'd like you to commit and push.
+
+## Commit Message Conventions
+
+All commit messages **must** follow [Conventional Commits](https://www.conventionalcommits.org/):
+
+```
+<type>(<scope>): <short summary>
+
+[optional body — explain the WHY, not the what]
+```
+
+**Rules:**
+- Summary is **imperative mood**, **lowercase**, **no period** at end
+- First line max **72 characters**
+- Body (optional) explains motivation and context, separated by a blank line
+
+**Types:**
+
+| Type | When to use |
+|------|-------------|
+| `feat` | New user-facing feature |
+| `fix` | Bug fix |
+| `refactor` | Code restructure with no behavior change |
+| `style` | CSS/SCSS changes only |
+| `perf` | Performance improvement |
+| `test` | Adding or updating tests |
+| `chore` | Tooling, config, build, dependencies |
+| `docs` | Documentation only |
+
+**Scope** (optional but recommended): the component or area affected — e.g., `pomodoro`, `ai`, `kanban`, `sync`, `notes`, `auth`, `projects`, `review`, `export`
+
+**Examples:**
+```
+feat(pomodoro): add resizable column split in focus mode
+fix(sync): prevent race condition when switching tasks
+refactor(ai): extract provider abstraction into helper functions
+style(kanban): fix drag ghost placeholder alignment
+feat(notes): add wikilink autocomplete in editor
+fix(auth): handle popup-blocked redirect fallback on Safari
+chore: update submodule pointer
+```
 
 ## Repository Layout
 
@@ -38,17 +79,19 @@ If the working tree has uncommitted changes from a previous task, commit or stas
 
 When the task is complete, **execute these steps in order**. Do not skip any step.
 
-### Step 1: Commit all changes
+### Step 1: Stage all changes (do NOT commit yet)
 
-Stage and commit all changes on the current working branch. Do not leave uncommitted work.
+Stage everything in both repos. The final single commit is created in Step 4 after rebasing.
 
 ```bash
-# Stage and commit (use a descriptive message)
-git add -A && git commit -m "your message"
+# Parent repo
+git add -A
 
 # Submodule (only if it has changes)
-git -C themes/hugo-book add -A && git -C themes/hugo-book commit -m "your message"
+git -C themes/hugo-book add -A
 ```
+
+> If you already made interim commits during development, that is fine — Step 4 will squash them all.
 
 ### Step 2: Run tests
 
@@ -74,9 +117,33 @@ git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/ma
 
 If the rebase produces conflicts, resolve them and re-run tests before proceeding.
 
-### Step 4: Fast-forward merge into main
+### Step 4: Squash into a single commit
 
-Merge the rebased branch into `main` using fast-forward only. This ensures a linear history.
+All work for a task must land on `main` as **one commit**. This keeps `git log` clean and makes revert/bisect trivial.
+
+Use `git reset --soft` to collapse everything since the branch point into a single staged snapshot, then commit once with a well-formed conventional commit message:
+
+```bash
+# Parent repo — squash all commits on this branch into one
+git reset --soft origin/main
+git commit -m "feat(scope): short imperative summary"
+
+# Submodule (only if it has changes)
+git -C themes/hugo-book reset --soft origin/master
+git -C themes/hugo-book commit -m "feat(scope): short imperative summary"
+```
+
+Craft the message following the **Commit Message Conventions** section above. If the body is needed, use:
+
+```bash
+git commit -m "feat(scope): short summary" -m "Longer explanation of why this change was made."
+```
+
+> **Why `reset --soft` instead of `rebase -i`?** `reset --soft origin/main` is non-interactive, agent-friendly, and produces the exact same result — a single commit on top of `main`.
+
+### Step 5: Fast-forward merge into main
+
+Merge the squashed commit into `main` using fast-forward only. This ensures a linear history.
 
 ```bash
 # Parent repo
@@ -86,9 +153,9 @@ git checkout main && git merge --ff-only <your-branch>
 git -C themes/hugo-book checkout master && git -C themes/hugo-book merge --ff-only <submodule-branch>
 ```
 
-If `--ff-only` fails, it means the rebase wasn't done correctly. Go back to Step 2.
+If `--ff-only` fails, it means the rebase in Step 3 wasn't done correctly. Go back to Step 3.
 
-### Step 5: Push the submodule (if it has changes)
+### Step 6: Push the submodule (if it has changes)
 
 ```bash
 git -C themes/hugo-book push origin master
@@ -96,16 +163,16 @@ git -C themes/hugo-book push origin master
 
 Skip this step if there are no submodule changes.
 
-### Step 6: Update the parent's submodule pointer (if submodule was pushed)
+### Step 7: Update the parent's submodule pointer (if submodule was pushed)
 
 Back in the parent repo root:
 
 ```bash
 git add themes/hugo-book
-git commit -m "update submodule pointer"
+git commit -m "chore: update submodule pointer"
 ```
 
-### Step 7: Push the parent repo
+### Step 8: Push the parent repo
 
 ```bash
 git push origin main
@@ -113,23 +180,25 @@ git push origin main
 
 ## Critical Rules
 
-1. **Always run tests before pushing** -- `npm test` must pass. Do not push broken code.
-2. **Always rebase onto main before pushing** -- keeps history linear, avoids merge commits.
-3. **Always fast-forward merge into main** -- `git merge --ff-only` ensures the rebase was correct. Never force a non-fast-forward merge.
-4. **Always push submodule FIRST** -- if you push the parent first, CI will fail because the parent points to a submodule commit that doesn't exist on the remote yet.
-5. **The parent repo tracks the submodule commit hash** -- after committing in the submodule, the parent shows `themes/hugo-book` as modified. You must `git add themes/hugo-book` and commit in the parent.
-6. **CI/CD triggers on parent push** -- GitHub Actions runs Hugo build + Playwright tests + deploy to GitHub Pages.
-7. **Submodule branch is `master`**, parent branch is `main` -- don't mix them up.
-8. **Submodule remote is named `origin`** — verify with `git -C themes/hugo-book remote -v`.
-9. **No PRs for now** -- commit directly to `main`. This will change in the future.
+1. **Always run tests before pushing** — `npm test` must pass. Do not push broken code.
+2. **Always rebase onto main before pushing** — keeps history linear, avoids merge commits.
+3. **Always squash to a single commit per task** — use `git reset --soft origin/main` before committing. One task = one commit on `main`.
+4. **Always use Conventional Commits format** — `type(scope): summary` in imperative mood, lowercase, max 72 chars.
+5. **Always fast-forward merge into main** — `git merge --ff-only` ensures the squash + rebase was correct. Never force a non-fast-forward merge.
+6. **Always push submodule FIRST** — if you push the parent first, CI will fail because the parent points to a submodule commit that doesn't exist on the remote yet.
+7. **The parent repo tracks the submodule commit hash** — after committing in the submodule, the parent shows `themes/hugo-book` as modified. You must `git add themes/hugo-book` and commit in the parent.
+8. **CI/CD triggers on parent push** — GitHub Actions runs Hugo build + Playwright tests + deploy to GitHub Pages.
+9. **Submodule branch is `master`**, parent branch is `main` — don't mix them up.
+10. **Submodule remote is named `origin`** — verify with `git -C themes/hugo-book remote -v`.
+11. **No PRs for now** — commit directly to `main`. This will change in the future.
 
 ## Verification
 
 After pushing:
 ```bash
-git status                           # should be clean
-git -C themes/hugo-book status       # should be clean
-git log --oneline -1                 # verify parent commit is on main
+git status                                # should be clean
+git -C themes/hugo-book status            # should be clean
+git log --oneline -3                      # verify single clean commit on main
 git -C themes/hugo-book log --oneline -1  # verify submodule commit
 ```
 
@@ -137,5 +206,5 @@ git -C themes/hugo-book log --oneline -1  # verify submodule commit
 
 Use this skill whenever you are done with a task and need to push changes. This includes:
 - Changes inside `themes/hugo-book/` (requires the full submodule push flow)
-- Changes only in the parent repo (skip submodule steps 4-5)
+- Changes only in the parent repo (skip submodule steps 6-7)
 - Any time the user says "push", "ship it", "we're done", or similar
