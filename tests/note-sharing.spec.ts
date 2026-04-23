@@ -1,5 +1,7 @@
 import { test, expect } from '@playwright/test';
 import {
+  DB_NAME,
+  DB_VERSION,
   MOCK_USER,
   MOCK_COLLABORATOR,
   injectMockAuth,

@@ -21,9 +21,17 @@ async function setup(page: Parameters<typeof waitForDmSync>[0]) {
   await injectMockAuth(page, MOCK_USER);
   await page.goto('./docs/dashboard/');
   await waitForDmSync(page);
-  await page.waitForSelector('#dashboard-auth, #dashboard-content, #dashboard-loading', {
-    timeout: 10_000,
-  });
+  // Wait for dashboard to leave initial hidden state (any visible state: auth, loading, empty, or content)
+  await page.waitForFunction(
+    () => {
+      const ids = ['dashboard-auth', 'dashboard-content', 'dashboard-loading', 'dashboard-empty'];
+      return ids.some(id => {
+        const el = document.getElementById(id);
+        return el && getComputedStyle(el).display !== 'none';
+      });
+    },
+    { timeout: 10_000 },
+  );
 }
 
 /** Seed some completed todos (required for dashboard to show content). */

@@ -3,6 +3,7 @@ import {
   MOCK_USER,
   injectMockAuth,
   seedTodo,
+  seedIdb,
   cleanupIdb,
   getIdbRecord,
   waitForDmSync,
@@ -13,19 +14,53 @@ import {
 // Helpers
 // ─────────────────────────────────────────────
 
-const TODO_IDS = ['kb-task-1', 'kb-task-2', 'kb-task-3', 'kb-task-4'];
+const TODO_IDS = ['kb-task-1', 'kb-task-2', 'kb-task-3', 'kb-task-4', 'kb-setup'];
 
+/** Navigate to the board and wait for it to finish loading (empty or content state). */
 async function setup(page: Parameters<typeof waitForDmSync>[0]) {
   await injectMockAuth(page, MOCK_USER);
   await page.goto('./docs/board/');
   await waitForDmSync(page);
-  // Wait for the board columns to render
+  // handleSyncAuth clears all IDB stores (including kanbanColumns) during auth.
+  // Re-seed the 3 default columns so loadBoard() can render them.
+  const uid = MOCK_USER.uid;
+  const now = Date.now();
+  await seedIdb(page, 'kanbanColumns', [
+    { id: uid + '_col_todo',        userId: uid, name: 'To Do',       status: 'todo',        color: '#42a5f5', order: 0, isDoneColumn: false, createdAt: now, updatedAt: now },
+    { id: uid + '_col_in_progress', userId: uid, name: 'In Progress', status: 'in_progress', color: '#ffa726', order: 1, isDoneColumn: false, createdAt: now, updatedAt: now },
+    { id: uid + '_col_done',        userId: uid, name: 'Done',        status: 'done',        color: '#66bb6a', order: 2, isDoneColumn: true,  createdAt: now, updatedAt: now },
+  ]);
+  // Dispatch dm-sync-complete so loadBoard() re-reads columns from IDB
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('dm-sync-complete')));
+  // Wait for the board to be in empty or content state (loadBoard completed)
+  await page.waitForFunction(
+    () => {
+      const empty = document.getElementById('kanban-empty');
+      const content = document.getElementById('kanban-content');
+      if (!empty || !content) return false;
+      return getComputedStyle(empty).display !== 'none' || getComputedStyle(content).display !== 'none';
+    },
+    { timeout: 10_000 },
+  );
+}
+
+/**
+ * Seed a setup task and wait for the board to enter content state (columns visible).
+ * Use this for tests that need to inspect column structure.
+ */
+async function setupWithContent(page: Parameters<typeof waitForDmSync>[0]) {
+  await setup(page);
+  const setupTask = makeTodo('kb-setup', 'Setup task', MOCK_USER.uid, { kanbanStatus: 'todo' });
+  await seedTodo(page, setupTask);
+  await page.evaluate(() => window.dispatchEvent(new CustomEvent('dm-todos-updated')));
   await page.waitForSelector('[data-kanban-status]', { timeout: 10_000 });
 }
 
+/** Trigger a re-render of the kanban board. */
 async function triggerRender(page: Parameters<typeof waitForDmSync>[0]) {
   await page.evaluate(() => {
-    document.dispatchEvent(new CustomEvent('dm-todos-updated'));
+    // kanban-board.html listens on window for dm-todos-updated
+    window.dispatchEvent(new CustomEvent('dm-todos-updated'));
   });
   await page.waitForTimeout(300);
 }
@@ -36,7 +71,10 @@ async function triggerRender(page: Parameters<typeof waitForDmSync>[0]) {
 
 test.describe('Kanban Board — Layout', () => {
   test.beforeEach(async ({ page }) => {
-    await setup(page);
+    await setupWithContent(page);
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupIdb(page, 'todos', TODO_IDS);
   });
 
   test('renders three columns: todo, in_progress, done', async ({ page }) => {
