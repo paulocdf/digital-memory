@@ -126,11 +126,14 @@ export function injectMockAuth(page: Page, user: typeof MOCK_USER | null) {
       configurable: true,
     });
 
-    // Let dmDb be set normally by the page (Firestore may still initialise)
-    let _dmDb: any = null;
+    // Keep dmDb as null so syncTodos/syncNotes/syncProjects bail out immediately
+    // at their `if (!window.dmDb) return Promise.reject(...)` guard.
+    // Without this, the Firebase SDK sets dmDb and syncAll() runs Firestore
+    // queries that return empty snapshots, causing syncTodos() to delete every
+    // local-only IDB fixture seeded by tests (line 1036 of dm-sync.html).
     Object.defineProperty(window, 'dmDb', {
-      get() { return _dmDb; },
-      set(v) { _dmDb = v; },
+      get() { return null; },
+      set() {},   // swallow Firebase SDK's assignment
       configurable: true,
     });
 
@@ -324,7 +327,7 @@ export function makeTodo(
     status: opts.status ?? 'active',
     parentId: opts.parentId ?? null,
     order: opts.order ?? 1000,
-    scheduledDate: opts.scheduledDate ?? null,
+    scheduledDate: opts.scheduledDate ?? new Date().toISOString().slice(0, 10),
     reminderAt: opts.reminderAt ?? null,
     reminderFired: opts.reminderFired ?? false,
     source: opts.source ?? null,
@@ -438,9 +441,38 @@ export function makeReviewCard(
 // ─────────────────────────────────────────────
 
 /** Wait until window.dmSync (and key methods) are available. */
-export async function waitForDmSync(page: Page, timeout = 10_000) {
+export async function waitForDmSync(page: Page, timeout = 15_000) {
   await page.waitForFunction(
     () => !!(window as any).dmSync && typeof (window as any).dmSync.putNote === 'function',
     { timeout },
   );
+  // Dispatch dm-sync-complete on window so auth-gated UI components
+  // (todo-list, kanban, trash, etc.) render from IDB data.
+  // In tests there is no real Firestore so dm-sync.html's syncAll() never
+  // dispatches this event itself (it only fires on success or quota errors).
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('dm-sync-complete'));
+  });
+  // Wait for dm-sync.html's handleSyncAuth to finish its IDB setup.
+  // handleSyncAuth reads META.currentUserId and — on a fresh context where
+  // it's null — clears all IDB stores before writing the new userId.
+  // We must let this complete before any test seeds data, otherwise the
+  // clear races with the seed and wipes our test fixtures.
+  await page.waitForFunction(() => {
+    return new Promise<boolean>((resolve) => {
+      try {
+        const req = indexedDB.open('dm-notes');
+        req.onsuccess = () => {
+          const db = req.result as IDBDatabase;
+          try {
+            const tx = db.transaction('meta', 'readonly');
+            const r = tx.objectStore('meta').get('currentUserId');
+            r.onsuccess = () => { db.close(); resolve(!!r.result); };
+            r.onerror  = () => { db.close(); resolve(false); };
+          } catch (e) { db.close(); resolve(false); }
+        };
+        req.onerror = () => resolve(false);
+      } catch (e) { resolve(false); }
+    });
+  }, { timeout });
 }

@@ -48,7 +48,8 @@ test.describe('Settings Modal', () => {
     await page.evaluate(() => (window as any).openSettingsModal());
     await expect(page.locator('.settings-modal-overlay')).toHaveClass(/settings-modal-visible/);
 
-    await page.locator('.settings-modal-backdrop').click();
+    // Click a corner of the backdrop to avoid the dialog covering the center
+    await page.locator('.settings-modal-backdrop').click({ position: { x: 5, y: 5 } });
     await expect(page.locator('.settings-modal-overlay')).not.toHaveClass(/settings-modal-visible/);
   });
 
@@ -103,9 +104,11 @@ test.describe('Settings Modal', () => {
     await page.evaluate(() => (window as any).openSettingsModal());
     await expect(page.locator('.settings-modal-overlay')).toHaveClass(/settings-modal-visible/);
 
+    // The checkbox has width:0/height:0 (CSS toggle switch pattern).
+    // Click the wrapping label instead so the change event fires.
     const autoBreak = page.locator('#setting-auto-break');
     const initialState = await autoBreak.isChecked();
-    await autoBreak.click();
+    await page.locator('label.settings-modal-toggle-switch').filter({ has: page.locator('#setting-auto-break') }).click();
 
     const saved = await page.evaluate(() => localStorage.getItem('dm-pomo-auto-break'));
     expect(saved).toBe(initialState ? 'false' : 'true');
@@ -122,7 +125,12 @@ test.describe('Settings Modal', () => {
     await page.evaluate(() => (window as any).openSettingsModal());
     await expect(page.locator('.settings-modal-overlay')).toHaveClass(/settings-modal-visible/);
 
-    await page.keyboard.press('Escape');
+    // The Escape keydown listener is on the overlay element (not document).
+    // Dispatch the event directly on it because the overlay has no tabindex.
+    await page.evaluate(() => {
+      const overlay = document.querySelector('.settings-modal-overlay')!;
+      overlay.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
+    });
     await expect(page.locator('.settings-modal-overlay')).not.toHaveClass(/settings-modal-visible/);
   });
 });

@@ -27,8 +27,9 @@ async function setup(page: Parameters<typeof waitForDmSync>[0]) {
 
 async function triggerRender(page: Parameters<typeof waitForDmSync>[0]) {
   await page.evaluate(() => {
-    document.dispatchEvent(new CustomEvent('dm-sync-complete'));
-    document.dispatchEvent(new CustomEvent('dm-todos-updated'));
+    // trash-list.html listens on window for both events
+    window.dispatchEvent(new CustomEvent('dm-sync-complete'));
+    window.dispatchEvent(new CustomEvent('dm-todos-updated'));
   });
   await page.waitForTimeout(300);
 }

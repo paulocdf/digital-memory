@@ -3,10 +3,12 @@ import {
   MOCK_USER,
   injectMockAuth,
   seedTodo,
+  seedIdb,
   cleanupIdb,
   getIdbRecord,
   waitForDmSync,
   makeTodo,
+  makeNote,
 } from './helpers';
 
 // ─────────────────────────────────────────────
@@ -14,22 +16,56 @@ import {
 // ─────────────────────────────────────────────
 
 const TODO_IDS = ['it-task-1', 'it-task-2', 'it-task-3', 'it-parent-1', 'it-child-1', 'it-child-2'];
+const INBOX_NOTE_ID = 'it-inbox-note';
 
-/** Go to inbox and wait for the todo list to be ready. */
+/** Go to inbox and wait for the todo list to be ready (data layer tests). */
 async function setup(page: Parameters<typeof waitForDmSync>[0]) {
   await injectMockAuth(page, MOCK_USER);
   await page.goto('./docs/inbox/');
   await waitForDmSync(page);
-  // Wait for the todo list container to render
-  await page.waitForSelector('#todo-list', { state: 'visible', timeout: 10_000 });
+}
+
+/**
+ * Go to inbox and wait for the todo list to be visible (rendering tests).
+ * Seeds a minimal inbox note so single-note.html shows .single-note-content,
+ * which is the parent container of #todo-list.
+ */
+async function setupWithNote(page: Parameters<typeof waitForDmSync>[0]) {
+  await injectMockAuth(page, MOCK_USER);
+  await page.goto('./docs/inbox/');
+  await waitForDmSync(page);
+
+  // Seed a minimal inbox note so single-note.html transitions to 'content' state,
+  // making .single-note-content (which wraps #todo-list) visible.
+  const note = makeNote(INBOX_NOTE_ID, 'Inbox', MOCK_USER.uid, { destination: 'inbox', content: '' });
+  await seedIdb(page, 'notes', [note]);
+
+  // Trigger single-note.html to reload from cache with the new note
+  await page.evaluate(() => {
+    window.dispatchEvent(new CustomEvent('dm-sync-complete'));
+  });
+
+  // Wait for the todo list container to become actually visible.
+  // getComputedStyle reflects parent visibility too — #todo-list is inside
+  // .single-note-content which is only shown when an inbox note is found.
+  await page.waitForFunction(
+    () => {
+      const el = document.getElementById('todo-list');
+      if (!el) return false;
+      return getComputedStyle(el).display !== 'none';
+    },
+    { timeout: 10_000 },
+  );
 }
 
 /** Trigger a re-render of the todo list by dispatching the update event. */
 async function triggerRender(page: Parameters<typeof waitForDmSync>[0]) {
   await page.evaluate(() => {
-    document.dispatchEvent(new CustomEvent('dm-todos-updated'));
+    // todo-list.html listens on window (not document) for dm-todos-updated
+    window.dispatchEvent(new CustomEvent('dm-todos-updated'));
   });
-  await page.waitForTimeout(200);
+  // Allow time for async IDB reads inside loadTodos() to complete
+  await page.waitForTimeout(500);
 }
 
 // ─────────────────────────────────────────────
@@ -178,10 +214,11 @@ test.describe('Inbox Tasks — Data Layer', () => {
 test.describe('Inbox Tasks — Rendering', () => {
   test.afterEach(async ({ page }) => {
     await cleanupIdb(page, 'todos', TODO_IDS);
+    await cleanupIdb(page, 'notes', [INBOX_NOTE_ID]);
   });
 
   test('seeded todo appears in the task list', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'Seeded task title', MOCK_USER.uid);
     await seedTodo(page, todo);
     await triggerRender(page);
@@ -192,7 +229,7 @@ test.describe('Inbox Tasks — Rendering', () => {
   });
 
   test('done task gets a done CSS class', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'Done task', MOCK_USER.uid, {
       done: true,
       status: 'done',
@@ -209,7 +246,7 @@ test.describe('Inbox Tasks — Rendering', () => {
   });
 
   test('multiple tasks render in the list', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const t1 = makeTodo('it-task-1', 'First task', MOCK_USER.uid, { order: 1000 });
     const t2 = makeTodo('it-task-2', 'Second task', MOCK_USER.uid, { order: 2000 });
     const t3 = makeTodo('it-task-3', 'Third task', MOCK_USER.uid, { order: 3000 });
@@ -224,7 +261,7 @@ test.describe('Inbox Tasks — Rendering', () => {
   });
 
   test('deleted task does not appear in the list', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'Deleted task', MOCK_USER.uid, {
       deletedAt: Date.now(),
       status: 'deleted',
@@ -237,13 +274,13 @@ test.describe('Inbox Tasks — Rendering', () => {
   });
 
   test('todo add form is visible', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     await expect(page.locator('#todo-add-title')).toBeVisible();
     await expect(page.locator('#todo-add-btn')).toBeVisible();
   });
 
   test('child task renders inside parent item group', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const parent = makeTodo('it-parent-1', 'Parent task', MOCK_USER.uid, { order: 1000 });
     const child = makeTodo('it-child-1', 'Child task', MOCK_USER.uid, {
       parentId: 'it-parent-1',
@@ -260,6 +297,7 @@ test.describe('Inbox Tasks — Rendering', () => {
 
 test.describe('Inbox Tasks — Add Form', () => {
   test.afterEach(async ({ page }) => {
+    await cleanupIdb(page, 'notes', [INBOX_NOTE_ID]);
     // Clean up any tasks created by title
     await page.evaluate(() => {
       return (window as any).dmSync.getAllTodos().then((todos: any[]) => {
@@ -270,21 +308,21 @@ test.describe('Inbox Tasks — Add Form', () => {
   });
 
   test('add form input accepts text', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const input = page.locator('#todo-add-title');
     await input.fill('[TEST] My new task');
     await expect(input).toHaveValue('[TEST] My new task');
   });
 
   test('pomodoro count buttons are present', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     await expect(page.locator('#todo-add-pomo-minus')).toBeAttached();
     await expect(page.locator('#todo-add-pomo-plus')).toBeAttached();
     await expect(page.locator('#todo-add-pomodoro-count')).toBeVisible();
   });
 
   test('date icon button is present', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     await expect(page.locator('#todo-add-date-icon')).toBeAttached();
   });
 });
@@ -292,10 +330,11 @@ test.describe('Inbox Tasks — Add Form', () => {
 test.describe('Inbox Tasks — BuJo Types', () => {
   test.afterEach(async ({ page }) => {
     await cleanupIdb(page, 'todos', TODO_IDS);
+    await cleanupIdb(page, 'notes', [INBOX_NOTE_ID]);
   });
 
   test('task with bujoType "task" renders task bullet', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'BuJo task', MOCK_USER.uid, { bujoType: 'task' });
     await seedTodo(page, todo);
     await triggerRender(page);
@@ -308,7 +347,7 @@ test.describe('Inbox Tasks — BuJo Types', () => {
   });
 
   test('task with bujoType "event" renders event bullet', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'BuJo event', MOCK_USER.uid, {
       bujoType: 'event',
       bujoState: 'open',
@@ -321,7 +360,7 @@ test.describe('Inbox Tasks — BuJo Types', () => {
   });
 
   test('task with bujoType "note" renders note bullet', async ({ page }) => {
-    await setup(page);
+    await setupWithNote(page);
     const todo = makeTodo('it-task-1', 'BuJo note', MOCK_USER.uid, {
       bujoType: 'note',
       bujoState: 'open',
