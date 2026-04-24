@@ -232,6 +232,17 @@ Last updated: 2026-04-10
 - User-editable custom context injected into system prompt
 - Quick actions: "Plan my day", "Suggest tasks", "Improve text", "Summarize"
 
+### Financial Context (opt-in, cloud providers only)
+- Settings toggle `Include budget context` (localStorage `dm-ai-include-budget`, default off)
+- When enabled and signed in with OpenAI or Gemini, appends a `## Financial Context` section to the system prompt: monthly income/allocated/spent/to-be-budgeted, up to 5 over-budget categories, and the last 7 days of transactions (max 8)
+- Never sent to the local WebLLM provider (not needed; data never leaves device anyway)
+- Helper `window.dmAI._loadBudgetContext()` returns `null` when the setting is off, there is no auth, or `dmBudget` is unavailable
+
+### AI expense parsing (Quick Capture Expense mode)
+- When the regex parser returns `no-amount`, Quick Capture shows a "Try AI parse" button (cloud providers only)
+- `window.dmAI.parseExpense(rawText)` → one-shot JSON extraction with `temperature: 0`, returns `{amount, date, payee, income, categoryHint}` or `null`
+- Result is fed into the same `createTransaction()` path as the regex parser — user never leaves the modal
+
 ### Conversational Task Creation
 - 7 regex patterns detect task creation intent from natural language
 - Parses date, time estimate, category from message text
