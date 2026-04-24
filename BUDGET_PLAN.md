@@ -340,12 +340,12 @@ Scope is large. Suggest shipping in 5 phases — each phase is usable standalone
 - **Deliverable:** user can manually log expenses and see monthly category progress.
 
 ### Phase 2 — Recurring, Quick Capture & AI (1–2 sessions)
-- Recurring rules + auto-post scheduler + todo integration
-- 5th Quick Capture mode (Expense) with regex NLP
-- AI system prompt extension; AI-assisted parsing fallback
-- Rollover toggle
-- Split transactions, transfers
-- CSV import wizard
+- [x] Recurring rules + auto-post scheduler + todo integration
+- [x] 5th Quick Capture mode (Expense) with regex NLP
+- [ ] AI system prompt extension; AI-assisted parsing fallback
+- [x] Rollover toggle
+- [ ] Split transactions (transfers deferred to later phase)
+- [ ] CSV import wizard
 - **Deliverable:** low-friction daily entry + automation.
 
 ### Phase 3 — Reports, charts & insights (1–2 sessions)

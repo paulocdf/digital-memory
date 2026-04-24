@@ -543,7 +543,7 @@ Modern consistent icon foundation, fully adopted across the app:
 ### Core
 - **Accounts** — single default "Main" account auto-created via `ensureDefaultAccount()` (multi-account planned for a later phase)
 - **Categories** — freeform expense or income categories, color coded
-- **Envelope budgets** — monthly allocation per category; deterministic ID `{YYYY-MM}_{categoryId}` for idempotent upserts; optional rollover flag
+- **Envelope budgets** — monthly allocation per category; deterministic ID `{YYYY-MM}_{categoryId}` for idempotent upserts; optional **rollover flag** carries unspent leftovers into the following month. `getMonthSummary()` walks backward through consecutive rollover-enabled months (max 24) and accumulates forward, so multi-month chains compound automatically. Each category row exposes `rolledOverCents` + `effectiveAllocated` (allocated + rolled over); negative leftovers clamp at zero.
 - **Transactions** — stored as integer cents (no floating point); fields: account, category, amount (sign encodes expense/income), date, month (indexed), payee, memo, cleared flag
 - **Recurring rules** — daily/weekly/monthly/yearly cadence with interval (e.g. "every 2 weeks"). Auto-post scheduler runs once on sign-in and then every 60 min; backfills up to 90 days of missed occurrences; idempotent via `recurringId + date` guard; respects `endDate`; pausable via `autoPost: false`. Monthly/yearly date arithmetic clamps to last day of target month (Jan 31 → Feb 28/29). Managed from `/docs/budget/recurring/` with inline add/edit form, status badge (Active/Paused), and a "Post due now" button for manual triggering.
 - **20 currencies supported** via ISO code dropdown in settings; formatted via `window.dmBudget.formatMoney(cents, currency)`
@@ -552,7 +552,7 @@ Modern consistent icon foundation, fully adopted across the app:
 - Month switcher (◀ / ▶)
 - Summary stats: budgeted, spent, remaining for the month
 - Quick-add expense/income form
-- Envelope list: per-category allocated vs spent with inline allocation editor
+- Envelope list: per-category allocated vs spent with inline allocation editor and rollover toggle (small ↻ button per row; when active, leftover carries into next month and shows as a `+ $X` chip under the allocation)
 - Add-category inline row
 - Local-only notice banner when mode is enabled
 
