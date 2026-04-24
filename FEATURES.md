@@ -572,6 +572,18 @@ Modern consistent icon foundation, fully adopted across the app:
 - Register view with filters (month, category, text search)
 - Inline edit all fields, delete per row
 
+### CSV Import (`/docs/budget/import/`)
+- 3-step wizard: paste/upload CSV → column mapping → preview & import
+- **Pure CSV parser** (`window.dmBudgetParseCsv`) — RFC-4180-ish: handles quoted fields with commas, escaped `""`, embedded newlines, `\r\n`/`\n`/`\r` line endings, trailing-empty-row stripping
+- **Money parser** (`window.dmBudgetParseMoney`) — `$1,234.56`, `(45.00)` parens-negative, `12.50-` trailing-minus, `3,75` comma-decimal, `1.234,56` European thousand+decimal, currency symbol stripping
+- **Date parser** (`window.dmBudgetParseDate`) — `YYYY-MM-DD`, `YYYY/MM/DD`, `MM/DD/YYYY` (US default), `DD/MM/YYYY` (heuristic when first part > 12), 2-digit year (+2000), strips time component, validates month/day ranges
+- **Auto-detect mapping** (`window.dmBudgetAutoDetectMapping`) — scans headers for date/amount/payee/memo/category synonyms (e.g. "Posted Date", "Description", "Memo", "Notes")
+- **Duplicate detection** (`window.dmBudgetIsDuplicate`) — same amount + same payee (case-insensitive) + date within ±3 days flags as duplicate; ignores soft-deleted transactions; auto-skipped by default
+- **Sign convention toggle** — "Negative = expense" checkbox (default ON); when OFF, flips sign so positive values become expenses (some banks export this way)
+- **Per-row controls** — skip checkbox, category dropdown (auto-matched by case-insensitive name from CSV's category column), duplicate badge, error badge for invalid rows
+- **Bulk actions** — "Skip all duplicates" / "Include all" buttons
+- **Imports via** `dmBudget.createTransaction({ source: 'csv-import', ... })` — sequential promise chain; imported rows auto-marked skipped to prevent double-import on re-click
+
 ### Local-only mode
 - Toggle in Settings → Budget
 - Persists to `localStorage` as `dm-budget-local-only`

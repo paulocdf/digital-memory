@@ -345,7 +345,7 @@ Scope is large. Suggest shipping in 5 phases — each phase is usable standalone
 - [x] AI system prompt extension; AI-assisted parsing fallback
 - [x] Rollover toggle
 - [x] Split transactions (transfers deferred to later phase)
-- [ ] CSV import wizard
+- [x] CSV import wizard
 - **Deliverable:** low-friction daily entry + automation.
 
 ### Phase 3 — Reports, charts & insights (1–2 sessions)
