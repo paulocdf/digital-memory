@@ -22,6 +22,11 @@ export default defineConfig({
     baseURL: 'http://localhost:1313/digital-memory/',
     trace: 'on-first-retry',
     screenshot: 'only-on-failure',
+    // Block service worker registration in all tests. The SW uses
+    // skipWaiting() + clients.claim() which on a fresh browser profile (CI)
+    // can destroy the page execution context right as seedIdb() runs,
+    // causing "Execution context was destroyed" flakes in review.spec.ts.
+    serviceWorkers: 'block',
   },
 
   projects: [
