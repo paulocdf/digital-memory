@@ -163,6 +163,30 @@ function calculateOrderForPosition(container, newIndex, itemId) {
 }
 ```
 
+### Icons — Use the Lucide Sprite
+
+**Never add new inline SVG icons.** Use the Lucide sprite at `themes/hugo-book/static/icons/sprite.svg` (110 symbols).
+
+**Hugo templates**:
+```html
+{{ partial "icon" "play" }}
+{{ partial "icon" (dict "name" "play" "size" 16) }}
+```
+
+**JS dynamic rendering**:
+```javascript
+element.innerHTML = window.dmIcon('play', 16);
+```
+
+**Direct `<use>` (preferred for string-concatenated HTML in JS)**:
+```html
+<svg class="dm-icon dm-icon--play" width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><use href="/digital-memory/icons/sprite.svg#icon-play"/></svg>
+```
+
+**Missing icon?** Add a `<symbol id="icon-NAME" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">...paths...</symbol>` to `sprite.svg` (copy paths from https://lucide.dev/).
+
+**Legitimate exceptions** (keep as inline SVG): theme sun/moon toggle, Google brand logo, progress rings (`todo-ring-*`, `focus-goal-ring-*`), BuJo state bullets, kanban pattern previews, heading-letter glyphs.
+
 ## Technical Gotchas
 
 ### Hugo

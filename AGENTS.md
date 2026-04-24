@@ -75,6 +75,9 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | `themes/hugo-book/layouts/partials/confirm-dialog.html` | ~290 | Confirmation and alert dialog |
 | `themes/hugo-book/layouts/partials/keyboard-shortcuts.html` | ~250 | Keyboard shortcuts help panel |
 | `themes/hugo-book/layouts/partials/search-modal.html` | ~25 | Search modal markup |
+| `themes/hugo-book/layouts/partials/appearance.html` | ~500 | Radical customization: skins, accent, textures, sidebar width (`window.dmAppearance`) |
+| `themes/hugo-book/layouts/partials/icon.html` | ~40 | Hugo partial for rendering Lucide sprite icons |
+| `themes/hugo-book/static/icons/sprite.svg` | ~250 | Lucide SVG sprite (110 icons) |
 | `themes/hugo-book/layouts/shortcodes/note-viewer.html` | ~1,100 | Single note viewer with backlinks |
 | `themes/hugo-book/layouts/shortcodes/single-note.html` | ~980 | Page-level note display |
 | `themes/hugo-book/layouts/shortcodes/section-notes.html` | ~520 | Section note listing (Books, Topics, Snippets) |

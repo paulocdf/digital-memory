@@ -194,6 +194,7 @@ test.describe('Pomodoro Auto-Advance Setting', () => {
           bujoType: 'task',
           bujoState: 'open',
           pomodoroLength: shortPomo,
+          breakLength: shortPomo, // keep final-break phase short so tests finish quickly
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -208,6 +209,7 @@ test.describe('Pomodoro Auto-Advance Setting', () => {
           bujoType: 'task',
           bujoState: 'open',
           pomodoroLength: shortPomo,
+          breakLength: shortPomo,
           createdAt: Date.now(),
           updatedAt: Date.now(),
         };
@@ -261,9 +263,10 @@ test.describe('Pomodoro Auto-Advance Setting', () => {
     const activeTodo = await page.evaluate(() => (window as any).dmPomodoro.getActiveTodoId());
     expect(activeTodo).toBe('auto-adv-sub-1');
 
-    // The timer should complete within a few seconds
-    // When auto-advance is OFF, the timer should CLOSE (not advance to sub-2)
-    await expect(page.locator('#pomodoro-focus-overlay')).toBeHidden({ timeout: 15000 });
+    // The timer should complete within a few seconds.
+    // When auto-advance is OFF, the timer plays a final break (~3s work + ~3s break)
+    // then closes (no advance to sub-2).
+    await expect(page.locator('#pomodoro-focus-overlay')).toBeHidden({ timeout: 20000 });
     await expect(page.locator('#pomodoro-timer')).toBeHidden({ timeout: 3000 });
 
     // Verify the timer did NOT start on Subtask Two
@@ -283,9 +286,10 @@ test.describe('Pomodoro Auto-Advance Setting', () => {
     });
     await expect(page.locator('#pomodoro-focus-overlay')).toBeVisible();
 
-    // Wait for the timer to complete and auto-advance to sub-2
-    // The focus overlay should stay visible (timer transitions to next subtask)
-    await expect(page.locator('#focus-title')).toContainText('Subtask Two', { timeout: 15000 });
+    // Wait for the timer to complete and auto-advance to sub-2.
+    // Sequence: ~3s work + 10s auto-advance countdown + ~3s final break + advance.
+    // Allow plenty of slack for CI variability.
+    await expect(page.locator('#focus-title')).toContainText('Subtask Two', { timeout: 30000 });
 
     // Timer should still be active (paused on the next subtask)
     const activeAfter = await page.evaluate(() => (window as any).dmPomodoro.getActiveTodoId());

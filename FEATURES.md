@@ -407,6 +407,70 @@ Last updated: 2026-04-10
 
 ---
 
+## 18a. Appearance / Radical Customization
+
+**Files**: `appearance.html` (~500 lines), `_defaults.scss`, `docs/inject/head.html` (early-apply)
+
+### Skin presets
+One-click curated combinations of accent, surfaces, heading gradients, and radius. Ships with **6 skins**:
+- **Default** — current look (blue accent)
+- **Minimal** — monochrome, flat, sharp corners
+- **Warm Paper** — cream background, brown accent, rounded
+- **Terminal** — dark green-on-black mono feel
+- **Neon** — saturated pink on dark with accent glow
+- **Solarized** — classic Ethan Schoonover palette (light + dark)
+
+Applied via `data-skin="..."` attribute on `<html>`; scoped CSS variable overrides live in `appearance.html`.
+
+### Accent color picker
+- 9 preset swatches plus a native `<input type="color">` for any custom hex
+- Sets `--color-accent`, `--color-accent-hover` (via `color-mix`), `--color-accent-soft` on `<html>`
+- Overrides the current skin's accent; "Use skin default" button to clear
+
+### Background textures
+6 options (None, Dots, Grid, Paper, Noise, Glow) applied via a `body::before` pseudo-layer when `data-bg-texture` is set on `<html>`. Light/dark-aware (paper & noise adapt their alpha).
+
+### Sidebar width
+Slider (12–22 rem) writes `--sidebar-width` on `<html>`. The Sass `$menu-width` usages in `_main.scss` and `_custom.scss` were converted to `var(--sidebar-width, #{$menu-width})` so the slider drives layout live.
+
+### Architecture
+- **No FOUC**: synchronous early-apply script in `docs/inject/head.html` reads localStorage and sets CSS vars / attributes before paint.
+- **Live updates**: every control writes localStorage and dispatches `dm-settings-changed`.
+- **Public API**: `window.dmAppearance` — `setSkin(id)`, `setAccent(hex|null)`, `setSidebarWidth(rem)`, `setBackground(id)`, `setHeaderHeight(rem)`, `setRadius(rem)`, `reset()`, `getState()`, `SKINS`, `ACCENTS`, `BACKGROUNDS`.
+- **UI mount**: `window.dmAppearanceBuildPanel(containerEl)` — idempotent, builds controls on first settings-modal open.
+
+### localStorage keys
+```
+dm-theme-skin           (preset id; removed when "default")
+dm-theme-accent         (hex; removed when using skin default)
+dm-theme-sidebar-width  (rem, 12-22)
+dm-theme-header-height  (rem, reserved for future use)
+dm-theme-radius         (rem, reserved for future use)
+dm-theme-background     (none|dots|grid|paper|noise|gradient)
+```
+
+---
+
+## 18b. Icon System (Lucide sprite)
+
+**Files**: `static/icons/sprite.svg`, `layouts/partials/icon.html`, `html-head.html` (JS helper)
+
+Modern consistent icon foundation, fully adopted across the app:
+- Single SVG sprite with **110 Lucide icons** (including `icon-home`, `icon-archive`, `icon-target`, `icon-layout`, `icon-circle`, `icon-grip`, `icon-pencil`, etc.), `stroke-width: 2`, `currentColor`, `24×24` viewBox.
+- **Hugo partial**: `{{ partial "icon" (dict "name" "play" "size" 16) }}` — short form `{{ partial "icon" "play" }}`.
+- **JS helper**: `window.dmIcon("play", 20)` — returns an `<svg><use href="…#icon-play"/></svg>` string for dynamically-rendered UI.
+- **Direct `<use>` pattern** (preferred for HTML/JS string concatenation): `<svg class="dm-icon dm-icon--NAME" width="W" height="H" viewBox="0 0 24 24" aria-hidden="true"><use href="/digital-memory/icons/sprite.svg#icon-NAME"/></svg>`
+- Global `.dm-icon` / `.dm-icon--solid` base styles in `_custom.scss`.
+- **~341 inline SVG icons migrated** to the sprite across 30 files (Apr 2026 sweep). Net −321 lines of code.
+- **Legitimately excluded from migration** (keep as inline SVG): theme sun/moon toggle (class-toggled), Google brand logo (multi-color), progress rings (`todo-ring-*`, `focus-goal-ring-*`, `focus-history-svg`), BuJo bullets (stylized state indicators), kanban pattern previews, heading-letter glyphs. When adding new icons in these categories, keep them inline.
+
+### Adding a new icon
+1. Add a `<symbol id="icon-NAME" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">...</symbol>` entry before `</svg>` in `static/icons/sprite.svg`.
+2. Reference it via `{{ partial "icon" "NAME" }}`, `window.dmIcon("NAME")`, or the direct `<use>` pattern.
+3. Lucide source: https://lucide.dev/ — copy paths from the SVG export.
+
+---
+
 ## 19. PWA / Installability
 
 **Files**: `manifest.json`, `sw.js`, `sw-register.js`
@@ -474,6 +538,9 @@ Last updated: 2026-04-10
 | `window.dmTodoEdit` | Task edit modal: `open(todo, callback)` |
 | `window.dmEditModal` | Note edit modal: `open(note, callback)` |
 | `window.dmKeyboardShortcuts` | Shortcuts overlay: `open()`, `close()` |
+| `window.dmAppearance` | Theming: `setSkin()`, `setAccent()`, `setBackground()`, `setSidebarWidth()`, `reset()`, `getState()`, `SKINS`, `ACCENTS`, `BACKGROUNDS` |
+| `window.dmAppearanceBuildPanel(el)` | Mounts the Appearance controls into a container element (idempotent) |
+| `window.dmIcon(name, size)` | Returns `<svg><use href="...#icon-{name}"/></svg>` markup from the Lucide sprite |
 | `window.dmAuth` | Firebase Auth instance |
 | `window.dmDb` | Firestore instance |
 | `window.dmAuthReady` | Promise resolving when auth state is known |
