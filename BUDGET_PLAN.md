@@ -344,7 +344,7 @@ Scope is large. Suggest shipping in 5 phases — each phase is usable standalone
 - [x] 5th Quick Capture mode (Expense) with regex NLP
 - [x] AI system prompt extension; AI-assisted parsing fallback
 - [x] Rollover toggle
-- [ ] Split transactions (transfers deferred to later phase)
+- [x] Split transactions (transfers deferred to later phase)
 - [ ] CSV import wizard
 - **Deliverable:** low-friction daily entry + automation.
 
