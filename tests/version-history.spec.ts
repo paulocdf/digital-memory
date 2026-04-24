@@ -51,7 +51,7 @@ test.describe('Version History — Data Layer', () => {
     await setup(page);
     const hasStore = await page.evaluate(() => {
       return new Promise<boolean>((resolve) => {
-        const req = indexedDB.open('dm-notes', 16);
+        const req = indexedDB.open('dm-notes', 17);
         req.onsuccess = () => {
           const has = req.result.objectStoreNames.contains('noteVersions');
           req.result.close();
