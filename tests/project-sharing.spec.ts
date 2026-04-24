@@ -212,7 +212,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
 
     const shareList = page.locator('#project-share-list');
     await expect(shareList).toContainText('Not shared with anyone');
@@ -229,7 +229,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const shareItem = page.locator('.project-share-item');
     await expect(shareItem).toHaveCount(1);
@@ -253,7 +253,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const itemStatus = page.locator('.project-share-item-status');
     await expect(itemStatus).toContainText('accepted');
@@ -271,7 +271,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const removeBtn = page.locator('.project-share-item-remove');
     await expect(removeBtn).toHaveCount(1);
@@ -302,7 +302,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const shareControls = page.locator('#project-share-controls');
     await expect(shareControls).not.toBeVisible();
@@ -329,7 +329,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     const sharingSection = page.locator('#project-share-section');
     await expect(sharingSection).toBeVisible();
 
@@ -343,7 +343,7 @@ test.describe('Project Sharing — Edit Modal UI', () => {
       (window as any)._pjTest.openModal(id);
     }, PROJECT_ID);
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     await expect(sharingSection).toBeVisible();
     await expect(page.locator('#project-share-list')).toContainText('Not shared with anyone');
   });
@@ -392,7 +392,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
 
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const banner = page.locator('#dm-project-invitations-banner');
     const card = banner.locator('.dm-invitation-card');
@@ -424,7 +424,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const card = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     const acceptBtn = card.locator('[data-project-accept-id]');
@@ -451,7 +451,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const card = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(card).toHaveCount(1);
@@ -459,7 +459,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     const dismissBtn = card.locator('[data-project-dismiss-id]');
     await dismissBtn.click();
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     await expect(card).toHaveCount(0);
   });
 
@@ -470,7 +470,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const banner = page.locator('#dm-project-invitations-banner');
     const cards = banner.locator('.dm-invitation-card');
@@ -492,7 +492,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const cards = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(0);
@@ -522,7 +522,7 @@ test.describe('Project Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-project-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const cards = page.locator('#dm-project-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(2);

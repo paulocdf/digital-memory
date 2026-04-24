@@ -1,1 +1,1 @@
-npx playwright test --project=ci
+npx playwright test --project=pre-push

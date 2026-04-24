@@ -118,6 +118,13 @@ test.describe('Pomodoro Project-Aware Features', () => {
     await page.goto('./');
     await page.waitForFunction(() => !!(window as any).dmPomodoro);
     await page.waitForFunction(() => !!(window as any).dmSync && !!(window as any).dmSync.putTodo);
+    // Shrink the inter-task break to 1 second so Next-button advance tests
+    // don't wait 5 minutes for the break to tick through. Also disable the
+    // 10 s auto-advance countdown so the break starts immediately.
+    await page.evaluate(() => {
+      localStorage.setItem('dm-pomo-short-break-seconds', '1');
+      localStorage.setItem('dm-pomo-auto-advance', 'false');
+    });
     await seedProjectData(page);
   });
 
@@ -261,12 +268,12 @@ test.describe('Pomodoro Project-Aware Features', () => {
     test('Next button auto-advances to next project task', async ({ page }) => {
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      // Click Next — should complete task 1 and start task 2
+      // Click Next — queues an inter-task break (1 s via test override), then
+      // starts the next task via a 100 ms setTimeout.
       await page.locator('#focus-next').click();
 
-      // Wait for the auto-advance (100ms setTimeout in the code)
       await expect(page.locator('#focus-title')).toContainText('Project Task Beta', {
-        timeout: 3000,
+        timeout: 8000,
       });
     });
 
@@ -283,11 +290,12 @@ test.describe('Pomodoro Project-Aware Features', () => {
 
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      // Click Next — should skip task 2 (done) and go to task 3
+      // Click Next — should skip task 2 (done) and go to task 3 after the
+      // inter-task break (1 s via test override).
       await page.locator('#focus-next').click();
 
       await expect(page.locator('#focus-title')).toContainText('Project Task Gamma', {
-        timeout: 3000,
+        timeout: 8000,
       });
     });
 
@@ -305,19 +313,20 @@ test.describe('Pomodoro Project-Aware Features', () => {
     test('Next button advances sequentially through multiple project tasks', async ({ page }) => {
       await startProjectTask(page, 'proj-task-1', 'Project Task Alpha');
 
-      // Advance from task 1 → task 2
+      // Advance from task 1 → task 2 (via 1 s inter-task break)
       await page.locator('#focus-next').click();
       await expect(page.locator('#focus-title')).toContainText('Project Task Beta', {
-        timeout: 3000,
+        timeout: 8000,
       });
 
-      // Wait for the new start() to fully initialize (IDB reads for project + task)
-      await page.waitForTimeout(500);
+      // Pause the new work session so it doesn't tick past the 1 s break
+      // mark before we click Next again.
+      await page.evaluate(() => (window as any).dmPomodoro.pause());
 
       // Advance from task 2 → task 3
       await page.locator('#focus-next').click();
       await expect(page.locator('#focus-title')).toContainText('Project Task Gamma', {
-        timeout: 3000,
+        timeout: 8000,
       });
     });
 
@@ -330,10 +339,10 @@ test.describe('Pomodoro Project-Aware Features', () => {
         page.locator('#focus-upnext-list .pomodoro-focus-upnext-item').first()
       ).toContainText('Project Task Beta');
 
-      // Advance to task 2
+      // Advance to task 2 (via 1 s inter-task break)
       await page.locator('#focus-next').click();
       await expect(page.locator('#focus-title')).toContainText('Project Task Beta', {
-        timeout: 3000,
+        timeout: 8000,
       });
 
       // Up Next should now show Gamma first (Beta is the active task)

@@ -203,7 +203,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
     }, NOTE);
 
     // Wait for share list to load
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
 
     const shareList = page.locator('#note-edit-share-list');
     await expect(shareList).toContainText('Not shared with anyone');
@@ -222,7 +222,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
     }, NOTE);
 
     // Wait for share list to render
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const shareItem = page.locator('.note-edit-share-item');
     await expect(shareItem).toHaveCount(1);
@@ -246,7 +246,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
       (window as any).dmEditModal.open(note);
     }, NOTE);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const itemStatus = page.locator('.note-edit-share-item-status');
     await expect(itemStatus).toContainText('accepted');
@@ -264,7 +264,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
       (window as any).dmEditModal.open(note);
     }, NOTE);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const removeBtn = page.locator('.note-edit-share-item-remove');
     await expect(removeBtn).toHaveCount(1);
@@ -295,7 +295,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
       (window as any).dmEditModal.open(note);
     }, collabNote);
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     // Share controls should be hidden (not the owner)
     const shareControls = page.locator('#note-edit-share-controls');
@@ -314,7 +314,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
       (window as any).dmEditModal.open(note);
     }, NOTE);
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     const sharingSection = page.locator('#note-edit-sharing-section');
     await expect(sharingSection).toBeVisible();
 
@@ -331,7 +331,7 @@ test.describe('Note Sharing — Edit Modal UI', () => {
       (window as any).dmEditModal.open(note);
     }, NOTE);
 
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     await expect(sharingSection).toBeVisible();
     await expect(page.locator('#note-edit-share-list')).toContainText('Not shared with anyone');
   });
@@ -384,7 +384,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     });
 
     // Wait for the banner to render
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const banner = page.locator('#dm-note-invitations-banner');
     const card = banner.locator('.dm-invitation-card');
@@ -418,7 +418,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const card = page.locator('#dm-note-invitations-banner .dm-invitation-card');
     const acceptBtn = card.locator('[data-note-accept-id]');
@@ -445,7 +445,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const card = page.locator('#dm-note-invitations-banner .dm-invitation-card');
     await expect(card).toHaveCount(1);
@@ -455,7 +455,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await dismissBtn.click();
 
     // Card should be removed after animation
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
     await expect(card).toHaveCount(0);
   });
 
@@ -467,7 +467,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const banner = page.locator('#dm-note-invitations-banner');
     // Banner should be empty (no cards)
@@ -491,7 +491,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const cards = page.locator('#dm-note-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(0);
@@ -521,7 +521,7 @@ test.describe('Note Sharing — Invitation Banners', () => {
     await page.evaluate(() => {
       window.dispatchEvent(new CustomEvent('dm-note-shares-updated'));
     });
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     const cards = page.locator('#dm-note-invitations-banner .dm-invitation-card');
     await expect(cards).toHaveCount(2);

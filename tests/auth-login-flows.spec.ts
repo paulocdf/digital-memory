@@ -215,7 +215,7 @@ test.describe('Login Flows — Firefox', () => {
     // Call dmSignIn
     await page.evaluate(() => (window as any).dmSignIn());
     // Give it time to execute
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
     const gisCalls = await page.evaluate(() => (window as any)._gisCalls);
@@ -232,7 +232,7 @@ test.describe('Login Flows — Firefox', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     const flag = await page.evaluate(() => localStorage.getItem('dm-gis-signed-out'));
     expect(flag).toBeNull();
@@ -243,7 +243,7 @@ test.describe('Login Flows — Firefox', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     const currentUser = await page.evaluate(() => (window as any)._mockAuthCurrentUser);
     expect(currentUser).toBeTruthy();
@@ -264,7 +264,7 @@ test.describe('Login Flows — Desktop Chrome (GIS)', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     const gisCalls = await page.evaluate(() => (window as any)._gisCalls);
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
@@ -284,7 +284,7 @@ test.describe('Login Flows — Desktop Chrome (GIS)', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
 
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
     expect(authCalls).toContain('signInWithPopup');
@@ -299,7 +299,7 @@ test.describe('Login Flows — Desktop Chrome (GIS)', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
 
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
     expect(authCalls).toContain('signInWithPopup');
@@ -310,7 +310,7 @@ test.describe('Login Flows — Desktop Chrome (GIS)', () => {
     await page.goto('./');
 
     // Wait long enough for autoInitGis polling to have run (if it were enabled)
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const gisCalls = await page.evaluate(() => (window as any)._gisCalls);
     // GIS should not have been initialized until user clicks sign-in
@@ -323,7 +323,7 @@ test.describe('Login Flows — Desktop Chrome (GIS)', () => {
 
     // Trigger sign-in to force GIS initialization
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     const initArgs = await page.evaluate(() => (window as any)._gisInitArgs);
     expect(initArgs).toBeTruthy();
@@ -344,7 +344,7 @@ test.describe('Login Flows — Mobile (Eager GIS Init)', () => {
     await page.goto('./');
 
     // Wait for the autoInitGis polling to complete
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const gisCalls = await page.evaluate(() => (window as any)._gisCalls);
     expect(gisCalls).toContain('initialize');
@@ -354,7 +354,7 @@ test.describe('Login Flows — Mobile (Eager GIS Init)', () => {
     await injectMockAuthAndGis(page, { isMobile: true, isFirefox: false });
     await page.goto('./');
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const initArgs = await page.evaluate(() => (window as any)._gisInitArgs);
     expect(initArgs).toBeTruthy();
@@ -368,7 +368,7 @@ test.describe('Login Flows — Mobile (Eager GIS Init)', () => {
     });
     await page.goto('./');
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const initArgs = await page.evaluate(() => (window as any)._gisInitArgs);
     expect(initArgs).toBeTruthy();
@@ -379,7 +379,7 @@ test.describe('Login Flows — Mobile (Eager GIS Init)', () => {
     await injectMockAuthAndGis(page, { isMobile: true, isFirefox: false });
     await page.goto('./');
 
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const initArgs = await page.evaluate(() => (window as any)._gisInitArgs);
     expect(initArgs).toBeTruthy();
@@ -401,7 +401,7 @@ test.describe('Login Flows — Sign-out', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignOut());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     const flag = await page.evaluate(() => localStorage.getItem('dm-gis-signed-out'));
     expect(flag).toBe('1');
@@ -412,7 +412,7 @@ test.describe('Login Flows — Sign-out', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignOut());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     const gisCalls = await page.evaluate(() => (window as any)._gisCalls);
     expect(gisCalls).toContain('disableAutoSelect');
@@ -423,7 +423,7 @@ test.describe('Login Flows — Sign-out', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignOut());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
     expect(authCalls).toContain('signOut');
@@ -437,11 +437,11 @@ test.describe('Login Flows — Sign-out', () => {
     await page.evaluate(() => (window as any)._mockAuthEmit({
       uid: 'x', displayName: 'X', email: 'x@x.com', photoURL: '',
     }));
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     // Then sign out
     await page.evaluate(() => (window as any).dmSignOut());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     const currentUser = await page.evaluate(() => (window as any)._mockAuthCurrentUser);
     expect(currentUser).toBeNull();
@@ -453,14 +453,14 @@ test.describe('Login Flows — Sign-out', () => {
 
     // Sign out first
     await page.evaluate(() => (window as any).dmSignOut());
-    await page.waitForTimeout(100);
+    await page.waitForTimeout(30);
 
     let flag = await page.evaluate(() => localStorage.getItem('dm-gis-signed-out'));
     expect(flag).toBe('1');
 
     // Now sign in again
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(200);
+    await page.waitForTimeout(50);
 
     flag = await page.evaluate(() => localStorage.getItem('dm-gis-signed-out'));
     expect(flag).toBeNull();
@@ -487,7 +487,7 @@ test.describe('Login Flows — GIS Prompt Fallback', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     expect(errors).toEqual([]);
   });
@@ -501,7 +501,7 @@ test.describe('Login Flows — GIS Prompt Fallback', () => {
     await page.goto('./');
 
     await page.evaluate(() => (window as any).dmSignIn());
-    await page.waitForTimeout(300);
+    await page.waitForTimeout(80);
 
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
     expect(authCalls).not.toContain('signInWithPopup');
@@ -520,7 +520,7 @@ test.describe('Login Flows — GIS Prompt Fallback', () => {
       (window as any).dmSignIn();
       (window as any).dmSignIn();
     });
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     expect(errors).toEqual([]);
     const authCalls = await page.evaluate(() => (window as any)._authCalls);
@@ -541,7 +541,7 @@ test.describe('Login Flows — No JS Errors', () => {
     page.on('pageerror', (err) => errors.push(err.message));
 
     await page.goto('./');
-    await page.waitForTimeout(1000);
+    await page.waitForTimeout(250);
 
     // Filter out errors from external scripts (GIS, analytics) that we don't control
     const appErrors = errors.filter(e =>
@@ -608,8 +608,13 @@ test.describe('Login Flows — No JS Errors', () => {
     // dmSignIn should not crash — it should retry and eventually call fallbackPopupSignIn
     await page.evaluate(() => (window as any).dmSignIn());
 
-    // Wait for the retry loop (~5 seconds max, but fallback fires at end)
-    await page.waitForTimeout(6000);
+    // Wait for the retry loop to eventually fall back to signInWithPopup.
+    // Previously this slept 6 s (the known retry budget). Polling finishes
+    // as soon as the fallback actually fires — typically ~2–3 s.
+    await expect.poll(
+      () => page.evaluate(() => (window as any)._authCalls || []),
+      { timeout: 8000, intervals: [200, 500] }
+    ).toContain('signInWithPopup');
 
     const appErrors = errors.filter(e =>
       !e.includes('google') && !e.includes('gsi') && !e.includes('gtag')

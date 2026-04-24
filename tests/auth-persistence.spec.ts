@@ -139,7 +139,7 @@ test.describe('Auth Persistence — SPA Navigation', () => {
     const booksLink = page.locator('.section-card.card-books h3 a');
     if (await booksLink.count() > 0) {
       await booksLink.click();
-      await page.waitForTimeout(1000); // wait for SPA swap + script execution
+      await page.waitForTimeout(250); // wait for SPA swap + script execution
 
       // After SPA navigation, dmAuth should still exist
       const hasAuthAfter = await page.evaluate(() => typeof window.dmAuth !== 'undefined');
@@ -384,7 +384,7 @@ test.describe('Auth Mock — Sign-out Flow', () => {
     await page.goto('./docs/inbox/');
 
     // Wait for auth to settle
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     // The quick-capture sign-out button is in the sidebar
     const qcSignout = page.locator('#qc-signout');
@@ -470,7 +470,7 @@ test.describe('Auth Mock — onAuthStateChanged Transitions', () => {
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
     // Should stay on home page (no redirect to inbox)
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
     expect(page.url()).not.toContain('inbox');
 
     // Auth UI should update in place
@@ -520,7 +520,7 @@ test.describe('Auth Mock — dm-cached-user localStorage Contract', () => {
     await page.goto('./docs/inbox/');
 
     // Wait for auth to settle
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     // Verify cached user exists
     const before = await page.evaluate(() => localStorage.getItem('dm-cached-user'));
@@ -539,7 +539,7 @@ test.describe('Auth Mock — dm-cached-user localStorage Contract', () => {
     await page.goto('./');
 
     // Wait for auth to settle
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const raw = await page.evaluate(() => localStorage.getItem('dm-cached-user'));
     expect(raw).not.toBeNull();
@@ -570,7 +570,7 @@ test.describe('Auth Mock — dm-cached-user localStorage Contract', () => {
     await page.goto('./');
 
     // Wait for auth to settle
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     const raw = await page.evaluate(() => localStorage.getItem('dm-cached-user'));
     expect(raw).toBeNull();
@@ -583,7 +583,7 @@ test.describe('Auth Mock — garden-sections Auth Gating', () => {
     await page.goto('./');
 
     // Wait for auth to settle and garden-sections to render
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(400);
 
     // Sections should NOT show real user data (notes, tasks, etc).
     // They may show "Sign in to see your notes." or empty state messages
@@ -634,7 +634,7 @@ test.describe('Auth Mock — garden-sections Auth Gating', () => {
     await page.evaluate(() => (window as any)._mockAuthEmit(null));
 
     // Wait for sections to re-render after sign-out events
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(400);
 
     // Sections should not show real user data after sign-out.
     // May show "Sign in" or empty state messages.
@@ -660,7 +660,7 @@ test.describe('Auth Mock — No Redirect After Login', () => {
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
     // Should stay on home page — auth UI updates in place
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
     expect(page.url()).not.toContain('inbox');
     await expect(page.locator('#garden-signin')).toBeHidden();
     await expect(page.locator('#garden-auth-user')).toBeVisible();
@@ -675,7 +675,7 @@ test.describe('Auth Mock — No Redirect After Login', () => {
     await expect(page.locator('#garden-auth-user')).toBeVisible();
 
     // Wait a bit to ensure no redirect happens
-    await page.waitForTimeout(2000);
+    await page.waitForTimeout(500);
 
     // Should still be on landing page
     expect(page.url()).not.toContain('inbox');
@@ -687,13 +687,13 @@ test.describe('Auth Mock — No Redirect After Login', () => {
     await page.goto('./docs/board/');
 
     // Wait for page to settle
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(150);
 
     // Simulate sign-in — should stay on current page
     await page.evaluate((u) => (window as any)._mockAuthEmit(u), MOCK_FIREBASE_USER);
 
     // Wait to ensure no navigation
-    await page.waitForTimeout(1500);
+    await page.waitForTimeout(400);
 
     // Should still be on board page
     expect(page.url()).toContain('board');
@@ -733,7 +733,7 @@ test.describe('Auth Mock — SPA Nav Auth Preservation', () => {
       await page.waitForURL(/board/, { timeout: 5000 });
 
       // Wait for SPA swap and script execution
-      await page.waitForTimeout(1000);
+      await page.waitForTimeout(250);
 
       // After SPA nav while signed out, board content should not be visible.
       // The kanban-auth or kanban-empty state should be shown instead.

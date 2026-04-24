@@ -36,9 +36,9 @@ async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
   await page.goto('./docs/review/');
   await page.waitForFunction(() => !!(window as any).dmSync);
   await seedCards(page, cards);
+  // loadQueue now returns a promise — await it so the review UI is ready
+  // by the time the test runs (saves ~300 ms per test × 77 tests).
   await page.evaluate(() => (window as any)._rvTest.loadQueue());
-  // Wait for review UI to settle
-  await page.waitForTimeout(300);
 }
 
 /** Navigate to review page with no cards seeded. */
@@ -48,7 +48,6 @@ async function setupEmpty(page: Parameters<typeof cleanupIdb>[0]) {
   // Clean any leftover cards
   await cleanupCards(page);
   await page.evaluate(() => (window as any)._rvTest.loadQueue());
-  await page.waitForTimeout(300);
 }
 
 /** Mock Firebase auth so dmSync methods that require auth will work.
@@ -277,7 +276,7 @@ test.describe('Flashcard Review', () => {
       await page.click('.review-rate-btn[data-quality="5"]');
 
       // Wait a bit for IDB write
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -377,7 +376,7 @@ test.describe('Flashcard Review', () => {
         await page.click('.review-rate-btn[data-quality="5"]');
         await page.click('#review-next-btn');
         if (i < 2) {
-          await page.waitForTimeout(100);
+          await page.waitForTimeout(30);
         }
       }
 
@@ -621,7 +620,7 @@ test.describe('Flashcard Review', () => {
       await form.locator('.review-edit-save').click();
 
       // Wait for loadQueue to re-render
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       // Verify the card was updated in IDB
       const card = await page.evaluate((id) => {
@@ -650,7 +649,7 @@ test.describe('Flashcard Review', () => {
       await form.locator('.review-edit-tags').fill('updated-tag, another-tag');
       await form.locator('.review-edit-save').click();
 
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -678,7 +677,7 @@ test.describe('Flashcard Review', () => {
       await form.locator('.review-edit-front').focus();
       await page.keyboard.press('Control+Enter');
 
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -775,7 +774,7 @@ test.describe('Flashcard Review', () => {
       await page.locator('.dm-confirm-ok').click();
 
       // Wait for animation and reload
-      await page.waitForTimeout(500);
+      await page.waitForTimeout(150);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -840,7 +839,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="5"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -867,7 +866,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="0"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -893,7 +892,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="3"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -926,7 +925,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="5"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -957,7 +956,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="5"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
@@ -990,7 +989,7 @@ test.describe('Flashcard Review', () => {
       await page.click('#review-reveal-btn');
       await page.click('.review-rate-btn[data-quality="0"]');
 
-      await page.waitForTimeout(300);
+      await page.waitForTimeout(80);
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
