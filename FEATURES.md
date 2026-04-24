@@ -340,11 +340,20 @@ Last updated: 2026-04-10
 
 **Files**: `quick-capture-modal.html` (HTML/CSS), `body.html` (JS logic, ~4,520 lines)
 
-- 4 modes: AI (default), Note, Code, Todo
+- 5 modes: AI (default), Note, Code, Todo, Expense
 - Tab/Shift+Tab cycles modes
 - Ctrl/Cmd+Enter saves
 - AI mode embeds chat inline with streaming
 - Todo mode has full fields (title, estimate, date, reminder)
+- Expense mode parses natural-language input and creates a budget transaction:
+  - `$12.50 coffee` → `-1250¢`, payee "coffee", today
+  - `4.50 lunch yesterday` → `-450¢`, yesterday
+  - `+500 salary 04/15` → `+50000¢` income, April 15
+  - `12 groceries #food` → category hint `food` (matched by name slug)
+  - Supports `today` / `yesterday` / `yday` keywords, `YYYY-MM-DD`, `MM/DD` (rolls back if future), comma-decimal (`3,75`)
+  - Live amount+payee+date preview under the input; category dropdown populated from `dmBudget.getCategories()`
+  - Saves via `dmBudget.createTransaction({ source: 'quick-capture' })` against the default account (`ensureDefaultAccount()`)
+  - Pure parser exposed as `window.dmQuickCaptureParseExpense(text)` for testability
 - Inbox append/new toggle for Note mode
 
 ---
