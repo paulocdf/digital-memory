@@ -16,3 +16,7 @@ headless: true
 - [**Review**]({{< relref "/docs/review" >}})
 - [**Tags**]({{< relref "/docs/tags" >}})
 - [**AI**]({{< relref "/docs/ai" >}})
+<br />
+
+- [**Budget**]({{< relref "/docs/budget" >}})
+- [**Transactions**]({{< relref "/docs/budget/transactions" >}})

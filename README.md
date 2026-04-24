@@ -31,6 +31,10 @@ Digital Memory is a self-hosted digital garden that combines note-taking, task m
 ### AI
 - **AI Companion** — In-browser LLM (Qwen2.5-0.5B-Instruct via WebLLM/WebGPU). Runs entirely client-side — no API keys, no server calls. Task-aware system prompt with voice input support.
 
+### Finance
+- **Budget & Envelopes** — Personal finance tracking with accounts, categories, monthly envelope budgets, and a transaction register. Values stored as integer cents. Currency is configurable (20 ISO codes). A **local-only mode** keeps financial data on-device (no cloud sync); one-click erase wipes local data or both local and cloud.
+- **Spreadsheets** *(planned)* — Generic spreadsheet workspace powered by [HyperFormula](https://hyperformula.handsontable.com/) for formula evaluation, dependency graphs, and named ranges.
+
 ### General
 - **Export** — Bulk and per-item export (notes, tasks, flashcards, books) as ZIP via JSZip.
 - **Trash** — Soft delete with restore, permanent delete, and 30-day auto-purge.
@@ -51,6 +55,7 @@ Digital Memory is a self-hosted digital garden that combines note-taking, task m
 | Authentication | Firebase Auth (Google sign-in) |
 | File storage | Firebase Storage |
 | AI | WebLLM (Qwen2.5-0.5B-Instruct, WebGPU) |
+| Spreadsheet engine | HyperFormula *(planned, Phase 4)* |
 | Charts & graph | D3.js v7 |
 | Search | FlexSearch |
 | Drag & drop | SortableJS |

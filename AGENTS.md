@@ -88,6 +88,8 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | `themes/hugo-book/layouts/shortcodes/garden-sections.html` | ~160 | Garden sections overview on landing page |
 | `themes/hugo-book/layouts/shortcodes/garden-stats.html` | ~80 | Garden statistics on landing page |
 | `themes/hugo-book/layouts/shortcodes/import-notes.html` | ~170 | Note import utility |
+| `themes/hugo-book/layouts/shortcodes/budget-overview.html` | ~ | Budget: monthly envelope view, summary, quick-add expense/income |
+| `themes/hugo-book/layouts/shortcodes/budget-transactions.html` | ~ | Budget: transaction register with filters, inline edit, delete |
 
 ### Styles
 | File | Lines | Description |

@@ -206,9 +206,9 @@ element.innerHTML = window.dmIcon('play', 16);
 
 ### IndexedDB
 
-- **Version is currently 15**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
-- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store, v14->15 projectShares store.
-- **11 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns, projectShares.
+- **Version is currently 17**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
+- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store, v14->15 projectShares store, v15->16 (internal), v16->17 budget stores (`accounts`, `categories`, `budgets`, `transactions`, `recurring`).
+- **16 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns, projectShares, accounts, categories, budgets, transactions, recurring.
 
 ### Data Sync
 

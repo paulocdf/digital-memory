@@ -527,6 +527,68 @@ Modern consistent icon foundation, fully adopted across the app:
 
 ---
 
+## 22. Budget & Finance
+
+**Files**: `dm-sync.html` (data layer + `window.dmBudget` API), `budget-overview.html`, `budget-transactions.html`, `body.html` (settings section), `firestore.rules` (5 new collection blocks)
+
+### Core
+- **Accounts** — single default "Main" account auto-created via `ensureDefaultAccount()` (multi-account planned for a later phase)
+- **Categories** — freeform expense or income categories, color coded
+- **Envelope budgets** — monthly allocation per category; deterministic ID `{YYYY-MM}_{categoryId}` for idempotent upserts; optional rollover flag
+- **Transactions** — stored as integer cents (no floating point); fields: account, category, amount (sign encodes expense/income), date, month (indexed), payee, memo, cleared flag
+- **Recurring rules** — scaffold in place (daily/weekly/monthly/yearly cadence, interval, next fire date); generator wired up in a later phase
+- **20 currencies supported** via ISO code dropdown in settings; formatted via `window.dmBudget.formatMoney(cents, currency)`
+
+### Budget Overview page (`/docs/budget/`)
+- Month switcher (◀ / ▶)
+- Summary stats: budgeted, spent, remaining for the month
+- Quick-add expense/income form
+- Envelope list: per-category allocated vs spent with inline allocation editor
+- Add-category inline row
+- Local-only notice banner when mode is enabled
+
+### Transactions page (`/docs/budget/transactions/`)
+- Register view with filters (month, category, text search)
+- Inline edit all fields, delete per row
+
+### Local-only mode
+- Toggle in Settings → Budget
+- Persists to `localStorage` as `dm-budget-local-only`
+- `firestoreWrite()` short-circuits for budget collections (`accounts`, `categories`, `budgets`, `transactions`, `recurring`) — IDB writes only
+- Two erase buttons in Settings:
+  - **Erase local** — wipes the 5 IDB stores only; cloud copies untouched
+  - **Erase everywhere** — wipes IDB and batch-deletes all Firestore docs for the current user
+
+### Data layer
+- **IndexedDB v17** — 5 new stores: `accounts`, `categories`, `budgets`, `transactions`, `recurring`. Indexes on `userId`, `month`, `accountId`, `categoryId`, `date`, `deletedAt`, `archived`.
+- **Serializers**: `serializeAccount`, `serializeCategory`, `serializeBudget`, `serializeTransaction`, `serializeRecurring` — field whitelists for Firestore round-trip
+- **Sync**: `syncBudgetData()` + `syncOneBudgetStore()` wired into `syncAll()`; skipped entirely when local-only is on
+- **Dual-write** for all CRUD via standard `firestoreWrite()` pattern
+- **Per-user isolation** — Firestore rules enforce `request.auth.uid == resource.data.userId`. No sharing for finance data.
+- **Custom event**: `dm-budget-updated` fired on currency/local-only changes and wipes
+
+### Planned — Spreadsheet workspace (Phase 4)
+- Formula engine via [HyperFormula](https://hyperformula.handsontable.com/) — dependency graph, named ranges, cross-sheet refs
+- Not yet loaded; listed as a future dependency
+
+### Public API: `window.dmBudget`
+| Method | Purpose |
+|--------|---------|
+| `getCurrency()` / `setCurrency(code)` | Default currency (localStorage-backed) |
+| `isLocalOnly()` / `setLocalOnly(on)` | Toggle local-only mode |
+| `eraseAllData({ eraseCloud })` | Wipe budget data (optionally including cloud) |
+| `currentMonth()` | Returns current `YYYY-MM` string |
+| `getAccounts()` / `getAccount(id)` / `createAccount()` / `updateAccount()` / `deleteAccount()` | Account CRUD |
+| `ensureDefaultAccount()` | Creates "Main" account if none exists |
+| `getCategories()` / `createCategory()` / `updateCategory()` / `deleteCategory()` | Category CRUD |
+| `seedDefaultsIfEmpty()` | Seeds a starter set of expense/income categories |
+| `getBudgetsForMonth(month)` / `setBudget({ month, categoryId, amount, rollover })` | Envelope allocation |
+| `getTransactions({ month, categoryId, accountId })` / `createTransaction()` / `updateTransaction()` / `deleteTransaction()` | Transaction CRUD |
+| `getMonthSummary(month)` | Aggregates category totals, income/expense, remaining |
+| `formatMoney(cents, currency)` / `parseMoney(str)` | Money formatting helpers |
+
+---
+
 ## Global APIs
 
 | API | Purpose |
@@ -539,6 +601,7 @@ Modern consistent icon foundation, fully adopted across the app:
 | `window.dmEditModal` | Note edit modal: `open(note, callback)` |
 | `window.dmKeyboardShortcuts` | Shortcuts overlay: `open()`, `close()` |
 | `window.dmAppearance` | Theming: `setSkin()`, `setAccent()`, `setBackground()`, `setSidebarWidth()`, `reset()`, `getState()`, `SKINS`, `ACCENTS`, `BACKGROUNDS` |
+| `window.dmBudget` | Budget: accounts/categories/budgets/transactions CRUD, `getCurrency()`, `setLocalOnly()`, `eraseAllData()`, `getMonthSummary()`, `formatMoney()` |
 | `window.dmAppearanceBuildPanel(el)` | Mounts the Appearance controls into a container element (idempotent) |
 | `window.dmIcon(name, size)` | Returns `<svg><use href="...#icon-{name}"/></svg>` markup from the Lucide sprite |
 | `window.dmAuth` | Firebase Auth instance |
