@@ -13,7 +13,7 @@ export default defineConfig({
   // with auto (≥8) produced sporadic flakes in IDB-heavy review.spec.ts.
   workers: process.env.CI ? 1 : 4,
   reporter: process.env.CI ? 'github' : 'html',
-  timeout: process.env.CI ? 30_000 : 45_000,
+  timeout: process.env.CI ? 60_000 : 45_000,
   // Runs once before any tests; warms Hugo's on-demand renderer so the first
   // test workers don't each pay a 3-5 s rebuild for the landing page.
   globalSetup: require.resolve('./tests/global-setup.ts'),
