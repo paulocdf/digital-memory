@@ -536,7 +536,7 @@ Modern consistent icon foundation, fully adopted across the app:
 - **Categories** — freeform expense or income categories, color coded
 - **Envelope budgets** — monthly allocation per category; deterministic ID `{YYYY-MM}_{categoryId}` for idempotent upserts; optional rollover flag
 - **Transactions** — stored as integer cents (no floating point); fields: account, category, amount (sign encodes expense/income), date, month (indexed), payee, memo, cleared flag
-- **Recurring rules** — scaffold in place (daily/weekly/monthly/yearly cadence, interval, next fire date); generator wired up in a later phase
+- **Recurring rules** — daily/weekly/monthly/yearly cadence with interval (e.g. "every 2 weeks"). Auto-post scheduler runs once on sign-in and then every 60 min; backfills up to 90 days of missed occurrences; idempotent via `recurringId + date` guard; respects `endDate`; pausable via `autoPost: false`. Monthly/yearly date arithmetic clamps to last day of target month (Jan 31 → Feb 28/29). Managed from `/docs/budget/recurring/` with inline add/edit form, status badge (Active/Paused), and a "Post due now" button for manual triggering.
 - **20 currencies supported** via ISO code dropdown in settings; formatted via `window.dmBudget.formatMoney(cents, currency)`
 
 ### Budget Overview page (`/docs/budget/`)
@@ -586,6 +586,9 @@ Modern consistent icon foundation, fully adopted across the app:
 | `getTransactions({ month, categoryId, accountId })` / `createTransaction()` / `updateTransaction()` / `deleteTransaction()` | Transaction CRUD |
 | `getMonthSummary(month)` | Aggregates category totals, income/expense, remaining |
 | `formatMoney(cents, currency)` / `parseMoney(str)` | Money formatting helpers |
+| `getRecurring()` / `getRecurringById(id)` / `createRecurring()` / `updateRecurring()` / `deleteRecurring()` | Recurring rule CRUD |
+| `computeNextDate(dateStr, frequency, interval)` | Pure helper — advance a YYYY-MM-DD date by one cadence step (clamps month-end) |
+| `runRecurringDue({ today?, backfillCapDays? })` | Auto-post scheduler — posts all due rules idempotently, backfills up to 90 days |
 
 ---
 
