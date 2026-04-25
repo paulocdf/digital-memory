@@ -121,6 +121,23 @@ make run
 hugo server --disableFastRender
 ```
 
+### Firebase Emulators (optional, devtime only)
+
+For offline iteration without hitting live Firebase, start the emulator suite in a separate terminal:
+
+```bash
+npm run emulators           # starts Auth (9099), Firestore (8080), Storage (9199), UI (4000)
+npm run emulators:export    # same, with persistent state at .emulator-data/
+```
+
+Requires `firebase-tools` installed (`npm i -g firebase-tools` or use `npx firebase emulators:start`). Then enable emulator wiring in the browser:
+
+- One-shot: visit `http://localhost:1313/digital-memory/?emulators=1` (the flag persists to localStorage)
+- Manual toggle: `localStorage.setItem('dm-use-emulators', '1')` in DevTools, then reload
+- Disable: `localStorage.removeItem('dm-use-emulators')` and reload
+
+The emulator wiring is in `themes/hugo-book/layouts/partials/docs/inject/head.html` and only activates on `localhost`/`127.0.0.1`. `window.dmUsingEmulators === true` when active.
+
 ### Adding a New Feature (Checklist)
 
 1. Identify which file(s) to modify (see File Map above)

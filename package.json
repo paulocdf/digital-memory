@@ -6,6 +6,8 @@
     "test:ui": "playwright test --ui",
     "test:headed": "playwright test --headed",
     "test:report": "playwright show-report",
+    "emulators": "firebase emulators:start --project digital-memory-0",
+    "emulators:export": "firebase emulators:start --project digital-memory-0 --import=./.emulator-data --export-on-exit",
     "prepare": "husky"
   },
   "devDependencies": {
