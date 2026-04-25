@@ -25,7 +25,9 @@ async function waitForDmBudget(page: Page) {
       typeof (window as any).dmBudget.resolveReportRange === 'function' &&
       typeof (window as any).dmBudget.priorReportRange === 'function' &&
       typeof (window as any).dmBudget.getExpenseTrend === 'function' &&
-      typeof (window as any).dmBudget.getDailySpend === 'function',
+      typeof (window as any).dmBudget.getDailySpend === 'function' &&
+      typeof (window as any).dmBudget.getNetWorthSeries === 'function' &&
+      typeof (window as any).dmBudget.getCashflowForecast === 'function',
     { timeout: 10_000 },
   );
 }
@@ -663,5 +665,322 @@ test.describe('Budget Reports — getDailySpend', () => {
       (window as any).dmBudget.getDailySpend({}),
     );
     expect(result.year).toBe(new Date().getFullYear());
+  });
+});
+
+// ─────────────────────────────────────────────
+// getNetWorthSeries (Slice D helper)
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — getNetWorthSeries', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page);
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+  });
+
+  test('returns empty-ish series with no data', async ({ page }) => {
+    const result = await page.evaluate(() =>
+      (window as any).dmBudget.getNetWorthSeries({}),
+    );
+    expect(result.points.length).toBeGreaterThanOrEqual(1);
+    expect(result.currentCents).toBe(0);
+    expect(result.startCents).toBe(0);
+  });
+
+  test('builds running balance from opening balance + transactions', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Wallet', type: 'cash', openingBalance: 10000 });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: -500, date: '2026-04-01', payee: 'A' });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 2000, date: '2026-04-05', payee: 'Refund' });
+      return b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-10', bucket: 'day' });
+    });
+    expect(result.points.length).toBe(10);
+    // Day 0 (Apr 1) = 10000 + (-500) = 9500
+    expect(result.points[0].cents).toBe(9500);
+    // Day 4 (Apr 5) = 9500 + 2000 = 11500
+    expect(result.points[4].cents).toBe(11500);
+    // Last day (Apr 10) = 11500 (carried forward)
+    expect(result.points[9].cents).toBe(11500);
+    expect(result.currentCents).toBe(11500);
+    // startCents = balance BEFORE `from` (= openingBalance 10000, since both txs are within window)
+    // deltaCents = currentCents - startCents = 11500 - 10000 = 1500 (net change in window)
+    expect(result.startCents).toBe(10000);
+    expect(result.deltaCents).toBe(1500);
+  });
+
+  test('computes start balance from txs before `from`', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Wallet', type: 'cash', openingBalance: 5000 });
+      // Pre-window txs
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: -1000, date: '2025-12-01', payee: 'Old' });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 3000, date: '2026-01-15', payee: 'Pay' });
+      // In-window tx
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: -500, date: '2026-03-01', payee: 'Coffee' });
+      return b.getNetWorthSeries({ from: '2026-03-01', to: '2026-03-05', bucket: 'day' });
+    });
+    // startBal = 5000 + -1000 + 3000 = 7000 (before from)
+    // Apr 1 (within window) applies -500 → 6500
+    expect(result.startCents).toBe(7000);
+    expect(result.points[0].cents).toBe(6500);
+    expect(result.currentCents).toBe(6500);
+  });
+
+  test('excludes accounts with includeInNetWorth === false', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const a1 = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 10000 });
+      const a2 = await b.createAccount({ name: 'Hidden', type: 'cash', openingBalance: 5000 });
+      await b.updateAccount(a2.id, { includeInNetWorth: false });
+      await b.createTransaction({ accountId: a1.id, categoryId: null, amount: 1000, date: '2026-04-01', payee: 'X' });
+      await b.createTransaction({ accountId: a2.id, categoryId: null, amount: 9999, date: '2026-04-01', payee: 'Hidden' });
+      return b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-02', bucket: 'day' });
+    });
+    // Only Main (10000 + 1000) = 11000
+    expect(result.currentCents).toBe(11000);
+  });
+
+  test('ignores soft-deleted transactions', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 0 });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 500, date: '2026-04-01', payee: 'A' });
+      const tx = await b.createTransaction({ accountId: acct.id, categoryId: null, amount: -9999, date: '2026-04-01', payee: 'Trashed' });
+      await b.deleteTransaction(tx.id);
+      return b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-02', bucket: 'day' });
+    });
+    expect(result.currentCents).toBe(500);
+  });
+
+  test('defaults `from` to earliest transaction date', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 0 });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 100, date: '2026-02-15', payee: 'A' });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 200, date: '2026-03-20', payee: 'B' });
+      return b.getNetWorthSeries({ to: '2026-04-01' });
+    });
+    expect(result.earliestDate).toBe('2026-02-15');
+    expect(result.range.from).toBe('2026-02-15');
+  });
+
+  test('auto bucket switches to week for ranges > 365 days', async ({ page }) => {
+    const result = await page.evaluate(() =>
+      (window as any).dmBudget.getNetWorthSeries({ from: '2024-01-01', to: '2026-01-01' }),
+    );
+    expect(result.bucket).toBe('week');
+  });
+
+  test('memoizes result keyed by data state', async ({ page }) => {
+    // Call twice, expect identical reference (memo hit)
+    const sameRef = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 100 });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 50, date: '2026-04-01', payee: 'X' });
+      const r1 = await b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-05', bucket: 'day' });
+      const r2 = await b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-05', bucket: 'day' });
+      return r1 === r2;
+    });
+    expect(sameRef).toBe(true);
+
+    // Add a new tx — cache should invalidate (different reference, different value)
+    const invalidated = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const accts = await b.getAccounts();
+      await b.createTransaction({ accountId: accts[0].id, categoryId: null, amount: 25, date: '2026-04-02', payee: 'Y' });
+      const r3 = await b.getNetWorthSeries({ from: '2026-04-01', to: '2026-04-05', bucket: 'day' });
+      return r3.currentCents;
+    });
+    expect(invalidated).toBe(175);
+  });
+});
+
+// ─────────────────────────────────────────────
+// getCashflowForecast (Slice D helper)
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — getCashflowForecast', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page);
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+  });
+
+  test('returns flat balance with no recurring rules', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 50000 });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    expect(result.points.length).toBe(90);
+    expect(result.startBalanceCents).toBe(50000);
+    expect(result.endBalanceCents).toBe(50000);
+    expect(result.ruleCount).toBe(0);
+    expect(result.eventCount).toBe(0);
+    expect(result.points.every((p: any) => p.balanceCents === 50000)).toBe(true);
+  });
+
+  test('projects monthly recurring expense over 90 days', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 100000 });
+      await b.createRecurring({
+        name: 'Rent',
+        accountId: acct.id,
+        amount: -50000,
+        frequency: 'monthly',
+        interval: 1,
+        startDate: '2026-04-15',
+        nextDueDate: '2026-04-15',
+      });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    // Should fire on Apr 15, May 15, Jun 15 = 3 events
+    expect(result.eventCount).toBe(3);
+    expect(result.totalExpenseCents).toBe(150000);
+    expect(result.totalIncomeCents).toBe(0);
+    // Endpoint balance = 100000 - 150000 = -50000
+    expect(result.endBalanceCents).toBe(-50000);
+    expect(result.ruleCount).toBe(1);
+  });
+
+  test('classifies positive amounts as income', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 0 });
+      await b.createRecurring({
+        name: 'Salary',
+        accountId: acct.id,
+        amount: 200000,
+        frequency: 'monthly',
+        interval: 1,
+        startDate: '2026-04-30',
+        nextDueDate: '2026-04-30',
+      });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    expect(result.totalIncomeCents).toBeGreaterThan(0);
+    expect(result.totalExpenseCents).toBe(0);
+    expect(result.endBalanceCents).toBeGreaterThan(0);
+  });
+
+  test('skips paused (autoPost=false) rules', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 100000 });
+      const rule = await b.createRecurring({
+        name: 'Rent',
+        accountId: acct.id,
+        amount: -50000,
+        frequency: 'monthly',
+        startDate: '2026-04-15',
+        nextDueDate: '2026-04-15',
+      });
+      await b.updateRecurring(rule.id, { autoPost: false });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    expect(result.eventCount).toBe(0);
+    expect(result.ruleCount).toBe(0);
+  });
+
+  test('respects rule endDate', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 100000 });
+      await b.createRecurring({
+        name: 'Sub',
+        accountId: acct.id,
+        amount: -1000,
+        frequency: 'monthly',
+        startDate: '2026-04-15',
+        nextDueDate: '2026-04-15',
+        endDate: '2026-05-31',
+      });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    // Apr 15, May 15 only — Jun 15 is past endDate
+    expect(result.eventCount).toBe(2);
+  });
+
+  test('handles weekly recurring (~13 events in 90 days)', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 0 });
+      await b.createRecurring({
+        name: 'Coffee',
+        accountId: acct.id,
+        amount: -500,
+        frequency: 'weekly',
+        startDate: '2026-04-02',
+        nextDueDate: '2026-04-02',
+      });
+      return b.getCashflowForecast({ days: 90, today: '2026-04-01' });
+    });
+    // 90 days / 7 ≈ 12-13 occurrences
+    expect(result.eventCount).toBeGreaterThanOrEqual(12);
+    expect(result.eventCount).toBeLessThanOrEqual(13);
+  });
+});
+
+// ─────────────────────────────────────────────
+// UI smoke for Slice D (net worth + cashflow sections)
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — Slice D UI smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page, './docs/budget/reports/');
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+  });
+
+  test('net worth and cashflow sections render', async ({ page }) => {
+    await expect(page.locator('#dm-rpt-nw-section')).toBeVisible();
+    await expect(page.locator('#dm-rpt-nw-section')).toContainText('Net worth over time');
+    await expect(page.locator('#dm-rpt-cf-section')).toBeVisible();
+    await expect(page.locator('#dm-rpt-cf-section')).toContainText('90-day cashflow forecast');
+  });
+
+  test('net worth chart populates after seeding transactions', async ({ page }) => {
+    await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 50000 });
+      await b.createTransaction({ accountId: acct.id, categoryId: null, amount: 1000, date: '2026-04-01', payee: 'X' });
+      document.dispatchEvent(new CustomEvent('dm-budget-updated'));
+    });
+    await expect(page.locator('#dm-rpt-nw-stats')).toContainText('$510.00', { timeout: 5_000 });
+    // Path may be horizontal (flat line) when only one tx exists — Playwright treats zero-height
+    // SVG bounding boxes as hidden, so assert presence + non-empty `d` attribute instead.
+    const dAttr = await page.locator('#dm-rpt-nw-svg path.line').getAttribute('d');
+    expect(dAttr).toBeTruthy();
+    expect(dAttr!.length).toBeGreaterThan(10);
+  });
+
+  test('cashflow shows empty-state hint when no recurring rules', async ({ page }) => {
+    await page.evaluate(() => document.dispatchEvent(new CustomEvent('dm-budget-updated')));
+    await expect(page.locator('#dm-rpt-cf-svg')).toContainText('No active recurring rules', { timeout: 5_000 });
+  });
+
+  test('cashflow renders chart after seeding a recurring rule', async ({ page }) => {
+    await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const acct = await b.createAccount({ name: 'Main', type: 'checking', openingBalance: 100000 });
+      await b.createRecurring({
+        name: 'Rent',
+        accountId: acct.id,
+        amount: -50000,
+        frequency: 'monthly',
+        startDate: '2026-05-01',
+        nextDueDate: '2026-05-01',
+      });
+      document.dispatchEvent(new CustomEvent('dm-budget-updated'));
+    });
+    await expect(page.locator('#dm-rpt-cf-svg path.line')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('#dm-rpt-cf-stats')).toContainText('Income');
+    await expect(page.locator('#dm-rpt-cf-stats')).toContainText('Expense');
   });
 });
