@@ -687,6 +687,20 @@ Modern consistent icon foundation, fully adopted across the app:
 - Deterministic IDs per kind (`overspend-{catId}-{month}`, `pace-{catId}-{month}`, `first-payee-{slug}-{month}`, `drift-{recurringId}-{month}`) so the same insight stays dismissed across page loads
 - Helper: `window.dmBudget.computeInsights({ month, today, includeDismissed })` returns `{ month, today, insights: [{ id, kind, severity, title, body, data }] }`. Companion APIs: `dismissInsight(id)`, `resetDismissedInsights()`.
 
+### Auto-categorization Rules (`/docs/budget/rules/`) — Phase 3 Slice F
+- Dedicated page at `/docs/budget/rules/` for managing rules that auto-assign a category based on payee/memo patterns
+- **5 match types**: `payee-contains`, `payee-equals`, `payee-regex`, `memo-contains`, `memo-equals`. Non-regex matches are case-insensitive on trimmed strings; invalid regex returns no match silently (no throw)
+- **Evaluation order**: priority asc → createdAt asc tiebreak → first-match-wins. Disabled (`enabled: false`) and soft-deleted rules are skipped
+- **Auto-applied in `createTransaction`** when `categoryId == null && splits.length === 0 && !recurringId && !data.skipRules`. Sets `tx.appliedRuleId = ruleId`. Fire-and-forget bumps `rule.matchCount` and `rule.lastMatchedAt`. Explicit `categoryId` is never overridden.
+- **Bulk-apply button** on the page calls `bulkApplyRulesToUncategorized()` — scans all uncategorized non-split non-recurring tx and applies the first matching rule. Returns `{ scanned, updated }`.
+- **Test-match panel** (collapsible) lets users preview which rule (if any) matches a given payee/memo without saving anything
+- **UI**: form (matchType, pattern, category dropdown grouped by expense/income, priority, save/cancel) + rules table (priority, match summary, category chip, enabled toggle, match count + relative-time last-matched, edit + delete buttons)
+- **Soft delete** via `deletedAt` (no UI to recover yet — kept for audit history)
+- **IndexedDB v20** — new `categoryRules` store with indexes on `userId`, `priority`, `deletedAt`. Field `appliedRuleId` added to transactions store + `serializeTransaction` whitelist.
+- **Custom event**: `dm-category-rules-updated` fires on rule CRUD; `budget-rules.html` listens on both `document` and `window`
+- **Firestore rules**: per-user isolation block in `firestore.rules` (mirror of categories/accounts), pattern length capped at 500 chars
+- **Demo mode**: 3 sample rules seeded (Starbucks→Dining, Whole Foods→Groceries, disabled Uber→Misc)
+
 ### Local-only mode
 - Toggle in Settings → Budget
 - Persists to `localStorage` as `dm-budget-local-only`
@@ -696,7 +710,7 @@ Modern consistent icon foundation, fully adopted across the app:
   - **Erase everywhere** — wipes IDB and batch-deletes all Firestore docs for the current user
 
 ### Data layer
-- **IndexedDB v17** — 5 new stores: `accounts`, `categories`, `budgets`, `transactions`, `recurring`. Indexes on `userId`, `month`, `accountId`, `categoryId`, `date`, `deletedAt`, `archived`.
+- **IndexedDB v20** — 5 budget stores added in v17 (`accounts`, `categories`, `budgets`, `transactions`, `recurring`); `categoryRules` added in v20 (Slice F). Indexes on `userId`, `month`, `accountId`, `categoryId`, `date`, `deletedAt`, `archived`, `priority`.
 - **Serializers**: `serializeAccount`, `serializeCategory`, `serializeBudget`, `serializeTransaction`, `serializeRecurring` — field whitelists for Firestore round-trip
 - **Sync**: `syncBudgetData()` + `syncOneBudgetStore()` wired into `syncAll()`; skipped entirely when local-only is on
 - **Dual-write** for all CRUD via standard `firestoreWrite()` pattern
@@ -727,6 +741,9 @@ Modern consistent icon foundation, fully adopted across the app:
 | `runRecurringDue({ today?, backfillCapDays? })` | Auto-post scheduler — posts all due rules idempotently, backfills up to 90 days |
 | `computeInsights({ month?, today?, includeDismissed? })` | Compute monthly insights (overspend, pace, first-payee, subscription drift) |
 | `dismissInsight(id)` / `resetDismissedInsights()` | Persisted dismissal of insight cards via `localStorage['dm-insights-dismissed']` |
+| `getCategoryRules({ includeDeleted? })` / `getCategoryRule(id)` / `createCategoryRule()` / `updateCategoryRule()` / `deleteCategoryRule()` | Auto-categorization rule CRUD (soft delete via `deletedAt`) |
+| `applyCategoryRules(tx)` | Pure helper — returns `{ categoryId, ruleId }` of first matching rule or `null` |
+| `bulkApplyRulesToUncategorized()` | Apply rules to all uncategorized non-split non-recurring tx; returns `{ scanned, updated }` |
 
 ---
 

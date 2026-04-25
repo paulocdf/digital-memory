@@ -444,5 +444,26 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
     }
+
+    // Auto-categorization rules (Phase 3 Slice F). Per-user isolation only.
+    // Soft-deleted via `deletedAt` field; reads still allowed for owner.
+    match /categoryRules/{ruleId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'matchType', 'pattern', 'categoryId'])
+                    && request.resource.data.matchType is string
+                    && request.resource.data.pattern is string
+                    && request.resource.data.pattern.size() <= 500;
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && (!('pattern' in request.resource.data)
+                        || (request.resource.data.pattern is string
+                            && request.resource.data.pattern.size() <= 500));
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
   }
 }
