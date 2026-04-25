@@ -58,6 +58,12 @@ window.dmSync.firestoreWrite({
 });
 ```
 
+#### Documented exception: `acceptProjectShare()`
+
+`acceptProjectShare()` in `dm-sync.html` intentionally bypasses `firestoreWrite()` and issues direct Firestore writes. The reason is a circular dependency in the security rules: the rule that lets an invitee add themselves to a project's `collaborators` array requires the matching `projectShares` doc to *already* have `status === 'accepted'` in Firestore. Going through the IDB-first queue would race the two writes and the collaborator update would land before the share status was persisted, tripping the rule.
+
+Direct writes guarantee step 1 (share status → accepted) is durable in Firestore before step 2 (collaborator union) runs. We mirror to IDB after the fact to keep the optimistic cache invariant. Trade-off: offline accepts are not supported (the function rejects when `window.dmDb` is unavailable). This is the only sanctioned exception to the dual-write rule — see the function's JSDoc for full context. Do not pattern-match this elsewhere without explicit justification.
+
 ### Modal Pattern
 
 Modals are Hugo partials included via `inject/body.html`. Each modal exposes a global API:
