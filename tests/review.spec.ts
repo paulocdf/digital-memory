@@ -3,6 +3,7 @@ import {
   seedIdb,
   cleanupIdb,
   makeReviewCard,
+  disableDemoMode,
 } from './helpers';
 
 // ── Test data ──
@@ -33,6 +34,7 @@ async function cleanupCards(page: Parameters<typeof cleanupIdb>[0], cardIds = CA
 
 /** Navigate to review page, seed cards, and trigger loadQueue. */
 async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
+  await disableDemoMode(page);
   await page.goto('./docs/review/');
   await page.waitForFunction(() => !!(window as any).dmSync);
   await seedCards(page, cards);
@@ -43,6 +45,7 @@ async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
 
 /** Navigate to review page with no cards seeded. */
 async function setupEmpty(page: Parameters<typeof cleanupIdb>[0]) {
+  await disableDemoMode(page);
   await page.goto('./docs/review/');
   await page.waitForFunction(() => !!(window as any).dmSync);
   // Clean any leftover cards

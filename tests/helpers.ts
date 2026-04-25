@@ -46,6 +46,25 @@ export const MOCK_FIREBASE_USER = {
 };
 
 // ─────────────────────────────────────────────
+// Demo mode opt-out
+// ─────────────────────────────────────────────
+
+/**
+ * Disable demo mode for the page. Demo mode (dm-demo.html) populates 16 IDB
+ * stores with curated fixtures (8 review cards, kanban data, garden sections,
+ * etc.) when no `dm-cached-user` is in localStorage and `dm-demo-disabled` is
+ * not set. That breaks tests which assume signed-out = empty state, or which
+ * seed their own fixtures via raw IDB writes (demo mode intercepts reads).
+ *
+ * Call this BEFORE `page.goto()`. Idempotent — safe to call multiple times.
+ */
+export function disableDemoMode(page: Page) {
+  return page.addInitScript(() => {
+    try { localStorage.setItem('dm-demo-disabled', '1'); } catch (e) {}
+  });
+}
+
+// ─────────────────────────────────────────────
 // Auth mock
 // ─────────────────────────────────────────────
 
@@ -63,6 +82,9 @@ export const MOCK_FIREBASE_USER = {
  * Pass `null` as `user` to simulate a signed-out state.
  */
 export function injectMockAuth(page: Page, user: typeof MOCK_USER | null) {
+  // Always disable demo mode in mock-auth tests — demo fixtures interfere
+  // with both signed-in and signed-out test expectations.
+  disableDemoMode(page);
   return page.addInitScript((u) => {
     // Pre-populate cached user in localStorage (mirrors real auth flow)
     if (u) {
