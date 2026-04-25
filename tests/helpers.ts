@@ -17,7 +17,7 @@ import { Page } from '@playwright/test';
 // ─────────────────────────────────────────────
 
 export const DB_NAME = 'dm-notes';
-export const DB_VERSION = 17;
+export const DB_VERSION = 18;
 
 // ─────────────────────────────────────────────
 // Mock users

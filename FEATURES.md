@@ -471,6 +471,38 @@ dm-theme-background     (none|dots|grid|paper|noise|gradient)
 
 ---
 
+## 18c. Project & Task Visual Identity
+
+**Files**: `dm-sync.html` (theme registry + `dmApplyProjectTheme`), `project-list.html` (project edit modal + detail banner), `todo-edit-modal.html` (task flair controls), `todo-list.html`, `kanban-board.html` (task flair rendering), `_custom.scss` (CSS), `static/icons/sprite.svg`
+
+### Project appearance
+- **10 curated themes**: default, ocean, sunset, forest, mono, neon, paper, terminal, lavender, citrus — each defines accent, accent2, banner style, pattern, font family, density, card shape
+- **Per-project overrides**: icon (Lucide sprite), emoji, accent / accent2, banner style, pattern (dots/grid/paper/noise/diagonal), density, card shape, font family
+- **Banner**: rendered at the top of the project detail view; shows the project's icon/emoji + name + description + meta over the themed background
+- **Project cards** show the project icon/emoji where available; fall back to the color dot
+- **Theme application**: `window.dmApplyProjectTheme(rootEl, project)` writes `data-project-theme="..."`, `data-project-density`, `data-project-pattern`, `data-project-shape`, and CSS variables (`--pj-accent`, `--pj-accent2`, `--pj-radius`, `--pj-density-pad`, `--pj-font`) on the root element. Pass `null` to clear.
+- **Kanban board** picks up the project theme automatically when filtered to exactly one project; clears it when filter is cleared or multi-select.
+
+### Task flair
+- **Per-task fields**: `icon`, `emoji`, `labels` (string[]), `borderStyle` (`'rail' | 'full' | 'dashed' | 'glow'`), `priority` (`'low' | 'med' | 'high' | 'urgent'`)
+- **Rendering**: priority dot, icon/emoji prefix, label chips appear in inbox rows, project task lists, and kanban cards. `data-border-style` and `data-priority` attributes are set on each task element so CSS can style accordingly.
+- **Edit panel**: priority + border-style segmented controls, emoji input, free-form labels editor (chips with × removal) inside the inline task edit panel.
+
+### Data
+- IndexedDB v18 — additive fields only, no new stores.
+- Project serializer adds: `themeId, icon, emoji, accent, accent2, bannerStyle, pattern, density, cardShape, fontFamily, kanbanColumnStyles`.
+- Todo serializer adds: `icon, emoji, labels, borderStyle, priority`.
+
+### Public API
+| API | Purpose |
+|-----|---------|
+| `window.dmProjectThemes` | Theme registry: `{ id, name, accent, accent2, bannerStyle, pattern, font, density, shape }` |
+| `window.dmGetProjectTheme(id)` | Look up a theme by id (falls back to `default`) |
+| `window.dmResolveProjectTheme(project)` | Returns the effective theme — project overrides merged onto its `themeId` preset |
+| `window.dmApplyProjectTheme(rootEl, project)` | Apply / clear a theme on a DOM element |
+
+---
+
 ## 18b. Icon System (Lucide sprite)
 
 **Files**: `static/icons/sprite.svg`, `layouts/partials/icon.html`, `html-head.html` (JS helper)

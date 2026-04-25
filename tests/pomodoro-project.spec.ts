@@ -54,7 +54,7 @@ async function seedProjectData(page: Page) {
       const taskPromises = tasks.map((t: any) => dmSync.putTodo(t));
       // For the project, use raw IDB since createProject requires auth
       const projectPromise = new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('dm-notes', 17);
+        const req = indexedDB.open('dm-notes', 18);
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction('projects', 'readwrite');
@@ -77,7 +77,7 @@ async function cleanupProjectData(page: Page) {
       const dmSync = (window as any).dmSync;
       const taskPromises = taskIds.map((id: string) => dmSync.deleteTodo(id));
       const projectPromise = new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('dm-notes', 17);
+        const req = indexedDB.open('dm-notes', 18);
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction('projects', 'readwrite');

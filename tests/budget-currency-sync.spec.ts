@@ -19,7 +19,7 @@ async function waitForDmBudget(page: Page) {
 async function readWriteQueue(page: Page) {
   return page.evaluate(async () => {
     return await new Promise<any[]>((resolve, reject) => {
-      const req = indexedDB.open('dm-notes', 17);
+      const req = indexedDB.open('dm-notes', 18);
       req.onsuccess = () => {
         const db = req.result;
         const tx = db.transaction('writeQueue', 'readonly');
@@ -41,7 +41,7 @@ async function readWriteQueue(page: Page) {
 async function clearWriteQueue(page: Page) {
   await page.evaluate(async () => {
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open('dm-notes', 17);
+      const req = indexedDB.open('dm-notes', 18);
       req.onsuccess = () => {
         const db = req.result;
         const tx = db.transaction('writeQueue', 'readwrite');
