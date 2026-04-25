@@ -630,6 +630,26 @@ Modern consistent icon foundation, fully adopted across the app:
   - `resolveReportRange(input)` — normalizes preset ids or `{from, to}` into a `{ id, from, to, label }` range; uses calendar arithmetic for DST safety
   - `priorReportRange(range)` — equal-length window immediately preceding `range.from` (also calendar-arithmetic; returns `null` for zero-length input)
   - `getCategorySpend(rangeArg)` — returns `{ range, prior, rows[], currentTotal, priorTotal, deltaTotal }` where each row is `{ categoryId, name, color, kind, currentCents, priorCents, deltaCents, deltaPct, count }`
+  - `getExpenseTrend({from, to, bucket})` — returns `{ range, bucket, points: [{ key, label, cents, movingAvgCents }], totalCents, peakCents, avgCents, maWindow }`. `bucket` is `'day' | 'week' | 'month' | 'auto'`; `'auto'` picks day for ≤45-day ranges, week for ≤180, else month. Trailing moving average emits `null` until the window is filled (7 day / 4 week / 3 month). Missing buckets are zero-filled to keep the line continuous; income excluded.
+  - `getDailySpend({year})` — returns `{ year, days: [{ date, cents, dow, weekIndex }], totalCents, peakCents, avgCents, percentiles: { p50, p75, p90, p95 }, weekCount, firstDow }` for a GitHub-style calendar heatmap. Sunday-anchored grid; days zero-filled across the full year; percentiles computed across non-zero days only (with peak-quartile fallback when <4 non-zero days). Splits credited per-split, soft-deleted ignored, income excluded.
+
+### Spending Over Time (trend) — Phase 3 Slice B
+- Hand-rolled SVG line + area chart with dashed moving-average overlay, on the same Reports page below "Spending by category"
+- Bucket toggle (Day / Week / Month) — driven by `getExpenseTrend`'s `bucket` arg; the picker auto-highlights whichever bucket the helper resolved
+- Stats row: total, average per bucket, peak, MA window label
+- Hover overlay: vertical guide line + tooltip with bucket label, spend, and MA
+- Empty-state copy when there are no expenses (`totalCents === 0`)
+- Reuses the sticky range bar from Slice A — selecting a different range repaints the trend automatically
+
+### Daily Spending Heatmap — Phase 3 Slice C
+- GitHub-style year heatmap, Sunday-anchored: weeks as columns, days as rows
+- Hand-rolled SVG (no D3): one `<rect class="day lvl-N">` per day with month and dow labels
+- Independent year navigation (◀ / ▶) — separate from the global range bar (heatmaps are inherently a calendar-year view); next-year disabled when at current year
+- 5-level color scale (lvl-0..lvl-4) bucketed by per-year percentiles (p50/p75/p90), via `color-mix(var(--color-accent), var(--gray-200))` — adapts to skin/accent
+- Stats row: total, avg/day, peak day
+- Hover tooltip: date + amount (or "No spending")
+- Legend: Less ◻◻◻◻◻ More
+- Empty-state copy when `totalCents === 0`
 
 ### Local-only mode
 - Toggle in Settings → Budget

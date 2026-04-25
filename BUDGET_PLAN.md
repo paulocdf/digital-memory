@@ -351,8 +351,8 @@ Scope is large. Suggest shipping in 5 phases — each phase is usable standalone
 ### Phase 3 — Reports, charts & insights (1–2 sessions)
 Sliced into 6 commits — each independently shippable.
 - [x] **Slice A** — `/docs/budget/reports/` scaffold + Spending-by-Category donut & bar list with prior-period delta. Helpers: `resolveReportRange`, `priorReportRange`, `getCategorySpend`. Sticky range bar (This month / Last month / Last 3 mo / Last 6 mo / YTD / Custom).
-- [ ] **Slice B** — Expense trend line chart (D/W/M bucket switcher, 7-day moving avg). Helper: `getExpenseTrend({from,to,bucket})`.
-- [ ] **Slice C** — Calendar heatmap (year grid, percentile color scale). Helper: `getDailySpend(year)`.
+- [x] **Slice B** — Expense trend line chart (D/W/M bucket switcher with moving average — 7-day / 4-week / 3-month). Helper: `getExpenseTrend({from,to,bucket})`. Auto-bucket picks day for ≤45 days, week for ≤180, else month. Hand-rolled SVG line + area + dashed MA + hover tooltip.
+- [x] **Slice C** — Calendar heatmap (Sunday-anchored year grid, percentile color scale, year nav). Helper: `getDailySpend({year})` returns `{ year, days[], totalCents, peakCents, avgCents, percentiles, weekCount, firstDow }`. Hand-rolled SVG with hover tooltip.
 - [ ] **Slice D** — Net worth area chart (since earliest tx) + 90-day cashflow forecast. Helpers: `getNetWorthSeries({from,to})` (memoized by latest tx `updatedAt`) + `getCashflowForecast({days})`.
 - [ ] **Slice E** — Insights cards (over-spend, subscription drift, first-time payee, on-track-to-overspend) with persisted dismissal. Helper: `computeInsights({month})`.
 - [ ] **Slice F** — Auto-categorization rules at `/docs/budget/rules/`. New IDB store `categoryRules` (v17→v18 bump), serializer + Firestore rules; applied on `createTransaction`, CSV import, and Quick Capture.
