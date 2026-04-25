@@ -27,7 +27,10 @@ async function waitForDmBudget(page: Page) {
       typeof (window as any).dmBudget.getExpenseTrend === 'function' &&
       typeof (window as any).dmBudget.getDailySpend === 'function' &&
       typeof (window as any).dmBudget.getNetWorthSeries === 'function' &&
-      typeof (window as any).dmBudget.getCashflowForecast === 'function',
+      typeof (window as any).dmBudget.getCashflowForecast === 'function' &&
+      typeof (window as any).dmBudget.computeInsights === 'function' &&
+      typeof (window as any).dmBudget.dismissInsight === 'function' &&
+      typeof (window as any).dmBudget.resetDismissedInsights === 'function',
     { timeout: 10_000 },
   );
 }
@@ -982,5 +985,259 @@ test.describe('Budget Reports — Slice D UI smoke', () => {
     await expect(page.locator('#dm-rpt-cf-svg path.line')).toBeVisible({ timeout: 5_000 });
     await expect(page.locator('#dm-rpt-cf-stats')).toContainText('Income');
     await expect(page.locator('#dm-rpt-cf-stats')).toContainText('Expense');
+  });
+});
+
+// ─────────────────────────────────────────────
+// computeInsights (Slice E helper)
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — computeInsights', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+
+  test('returns empty insights with no data', async ({ page }) => {
+    const result = await page.evaluate(() =>
+      (window as any).dmBudget.computeInsights({ month: '2026-04', today: '2026-04-15' }),
+    );
+    expect(Array.isArray(result.insights)).toBe(true);
+    expect(result.insights.length).toBe(0);
+    expect(result.month).toBe('2026-04');
+  });
+
+  test('flags overspend category', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'Coffee', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      await b.setBudget('2026-04', cat.id, 5000);
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -7500, date: '2026-04-10', payee: 'Cafe',
+      });
+      return b.computeInsights({ month: '2026-04', today: '2026-04-15' });
+    });
+    const overspend = result.insights.filter((i: any) => i.kind === 'overspend');
+    expect(overspend.length).toBe(1);
+    expect(overspend[0].severity).toBe('alert');
+    expect(overspend[0].data.overCents).toBe(2500);
+    expect(overspend[0].id).toContain('overspend-');
+    expect(overspend[0].id).toContain('-2026-04');
+  });
+
+  test('flags pace category mid-month', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'Eats', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      await b.setBudget('2026-04', cat.id, 30000);
+      // Spent 60% of budget by day 10 of 30 → projected 600/10*30 = 1800 > 300 allocation? No.
+      // Better: spent 15000 by day 10, 30 day month. Projected = 15000/10*30 = 45000 > 30000. ✓
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -15000, date: '2026-04-05', payee: 'Restaurant',
+      });
+      return b.computeInsights({ month: '2026-04', today: '2026-04-10' });
+    });
+    const pace = result.insights.filter((i: any) => i.kind === 'pace');
+    expect(pace.length).toBe(1);
+    expect(pace[0].severity).toBe('warn');
+    expect(pace[0].data.projectedCents).toBe(45000);
+  });
+
+  test('skips pace insight for already-overspent categories', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'X', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      await b.setBudget('2026-04', cat.id, 5000);
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -10000, date: '2026-04-05', payee: 'Y',
+      });
+      return b.computeInsights({ month: '2026-04', today: '2026-04-10' });
+    });
+    // Should have overspend but NOT also pace for the same category
+    expect(result.insights.filter((i: any) => i.kind === 'overspend').length).toBe(1);
+    expect(result.insights.filter((i: any) => i.kind === 'pace').length).toBe(0);
+  });
+
+  test('flags first-time payee and ignores returning payees', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const accts = await b.getAccounts();
+      // Returning payee — exists in prior month
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: null,
+        amount: -1000, date: '2026-03-15', payee: 'Old Diner',
+      });
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: null,
+        amount: -1500, date: '2026-04-10', payee: 'Old Diner',
+      });
+      // First-time payee — only exists this month
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: null,
+        amount: -2500, date: '2026-04-12', payee: 'New Bakery',
+      });
+      return b.computeInsights({ month: '2026-04', today: '2026-04-15' });
+    });
+    const firstTime = result.insights.filter((i: any) => i.kind === 'first-payee');
+    expect(firstTime.length).toBe(1);
+    expect(firstTime[0].data.payee).toBe('New Bakery');
+  });
+
+  test('flags subscription drift when actual differs from rule by >5%', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const accts = await b.getAccounts();
+      const rule = await b.createRecurring({
+        name: 'Streaming',
+        accountId: accts[0].id,
+        amount: -1000,
+        frequency: 'monthly',
+        startDate: '2026-01-01',
+        nextDueDate: '2026-04-01',
+      });
+      // Actual posted at -1500 (50% drift up)
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: null,
+        amount: -1500, date: '2026-04-01', payee: 'Streaming',
+        recurringId: rule.id,
+      });
+      return b.computeInsights({ month: '2026-04', today: '2026-04-15' });
+    });
+    const drift = result.insights.filter((i: any) => i.kind === 'drift');
+    expect(drift.length).toBe(1);
+    expect(drift[0].data.direction).toBe('up');
+    expect(drift[0].data.expectedCents).toBe(-1000);
+    expect(drift[0].data.actualCents).toBe(-1500);
+  });
+});
+
+// ─────────────────────────────────────────────
+// dismissInsight / resetDismissedInsights (Slice E)
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — insight dismissal', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page);
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+
+  test('dismissInsight persists ID to localStorage', async ({ page }) => {
+    const stored = await page.evaluate(() => {
+      (window as any).dmBudget.dismissInsight('overspend-cat1-2026-04');
+      return JSON.parse(localStorage.getItem('dm-insights-dismissed') || '[]');
+    });
+    expect(stored).toEqual(['overspend-cat1-2026-04']);
+  });
+
+  test('dismissed insights are filtered from subsequent calls', async ({ page }) => {
+    const result = await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'Z', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      await b.setBudget('2026-04', cat.id, 1000);
+      // Prior-month tx with same payee suppresses first-payee insight
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -500, date: '2026-03-10', payee: 'Q',
+      });
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -2000, date: '2026-04-05', payee: 'Q',
+      });
+      const before = await b.computeInsights({ month: '2026-04', today: '2026-04-15' });
+      const overspend = before.insights.filter((i: any) => i.kind === 'overspend');
+      b.dismissInsight(overspend[0].id);
+      const after = await b.computeInsights({ month: '2026-04', today: '2026-04-15' });
+      return {
+        beforeCount: before.insights.length,
+        afterCount: after.insights.length,
+        overspendCount: overspend.length,
+      };
+    });
+    expect(result.overspendCount).toBe(1);
+    expect(result.afterCount).toBe(result.beforeCount - 1);
+  });
+
+  test('resetDismissedInsights clears the list', async ({ page }) => {
+    const after = await page.evaluate(() => {
+      const b = (window as any).dmBudget;
+      b.dismissInsight('a');
+      b.dismissInsight('b');
+      b.resetDismissedInsights();
+      return JSON.parse(localStorage.getItem('dm-insights-dismissed') || '[]');
+    });
+    expect(after).toEqual([]);
+  });
+});
+
+// ─────────────────────────────────────────────
+// UI smoke for Slice E
+// ─────────────────────────────────────────────
+
+test.describe('Budget Reports — Slice E UI smoke', () => {
+  test.beforeEach(async ({ page }) => {
+    await setup(page, './docs/budget/reports/');
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+  test.afterEach(async ({ page }) => {
+    await cleanupAllBudgetStores(page);
+    await page.evaluate(() => localStorage.removeItem('dm-insights-dismissed'));
+  });
+
+  test('insights section renders with empty state', async ({ page }) => {
+    await expect(page.locator('#dm-rpt-insights-section')).toBeVisible();
+    await expect(page.locator('#dm-rpt-insights-grid')).toContainText('No insights for this month', { timeout: 5_000 });
+  });
+
+  test('overspend card appears after seeding scenario', async ({ page }) => {
+    await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'Travel', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      const month = b.currentMonth();
+      await b.setBudget(month, cat.id, 5000);
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -10000, date: month + '-05', payee: 'Air',
+      });
+      document.dispatchEvent(new CustomEvent('dm-budget-updated'));
+    });
+    await expect(page.locator('.dm-rpt-insight-card[data-severity="alert"]')).toBeVisible({ timeout: 5_000 });
+    await expect(page.locator('.dm-rpt-insight-card[data-severity="alert"]')).toContainText('Travel');
+  });
+
+  test('dismiss button removes a card', async ({ page }) => {
+    await page.evaluate(async () => {
+      const b = (window as any).dmBudget;
+      const cat = await b.createCategory({ name: 'Rideshare', kind: 'expense', color: '#000' });
+      const accts = await b.getAccounts();
+      const month = b.currentMonth();
+      await b.setBudget(month, cat.id, 5000);
+      await b.createTransaction({
+        accountId: accts[0].id, categoryId: cat.id,
+        amount: -8000, date: month + '-05', payee: 'Uber',
+      });
+      document.dispatchEvent(new CustomEvent('dm-budget-updated'));
+    });
+    const card = page.locator('.dm-rpt-insight-card[data-severity="alert"]');
+    await expect(card).toBeVisible({ timeout: 5_000 });
+    await card.locator('.dm-rpt-insight-dismiss').click();
+    await expect(card).toHaveCount(0, { timeout: 5_000 });
+    // Footer should now show "Show 1 dismissed"
+    await expect(page.locator('#dm-rpt-insights-footer')).toContainText('dismissed');
   });
 });

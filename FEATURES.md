@@ -661,6 +661,18 @@ Modern consistent icon foundation, fully adopted across the app:
 - **90-day cashflow forecast** — line chart projecting balance forward over the next 90 days based on active recurring rules. Walks each rule's `nextDueDate` via `computeNextDate`, advances it forward to today, then generates events through today + 90 days. Positive amounts = income (green area fill), negative = expense (red area fill). Stats row: Start / End (proj) / Income / Expense / Events. Empty-state hint when no active recurring rules; rules with `autoPost === false` or expired `endDate` are skipped. Safety cap of 2000 iterations per rule.
 - Both charts hand-rolled SVG (no D3); area + line use `var(--color-accent)`; cashflow zero-line is dashed when the projection crosses zero.
 
+### Insights — Phase 3 Slice E
+- Severity-tinted cards section above Spending-by-Category on the Reports page; auto-hides when range preset is not "this-month" (insights are inherently a current-month signal)
+- **Four insight kinds**:
+  - **Overspend** (`alert`) — `spent > effectiveAllocated` for any envelope this month; shows category, amount over, and percent over
+  - **Pace** (`warn`) — projected end-of-month spend `(spent / dayOfMonth) * daysInMonth` exceeds `effectiveAllocated`; only fires when `dayOfMonth >= 5` and the category isn't already overspent (suppresses double-fire)
+  - **First-time payee** (`info`) — expense payees seen this month that never appeared in any prior month; top 5 by transaction date
+  - **Subscription drift** (`warn`) — recurring rule's actual posted tx (matched by `t.recurringId === rule.id`) differs from `rule.amount` by >5% AND ≥100¢; expected scaled by event count for weekly/daily multi-event months
+- Each card has a `×` dismiss button; dismissed IDs stored in `localStorage['dm-insights-dismissed']`
+- Footer shows "Show N dismissed" toggle when any are dismissed; switches to a read-only dismissed view with "Restore all" / "Back to active" controls
+- Deterministic IDs per kind (`overspend-{catId}-{month}`, `pace-{catId}-{month}`, `first-payee-{slug}-{month}`, `drift-{recurringId}-{month}`) so the same insight stays dismissed across page loads
+- Helper: `window.dmBudget.computeInsights({ month, today, includeDismissed })` returns `{ month, today, insights: [{ id, kind, severity, title, body, data }] }`. Companion APIs: `dismissInsight(id)`, `resetDismissedInsights()`.
+
 ### Local-only mode
 - Toggle in Settings → Budget
 - Persists to `localStorage` as `dm-budget-local-only`
@@ -699,6 +711,8 @@ Modern consistent icon foundation, fully adopted across the app:
 | `getRecurring()` / `getRecurringById(id)` / `createRecurring()` / `updateRecurring()` / `deleteRecurring()` | Recurring rule CRUD |
 | `computeNextDate(dateStr, frequency, interval)` | Pure helper — advance a YYYY-MM-DD date by one cadence step (clamps month-end) |
 | `runRecurringDue({ today?, backfillCapDays? })` | Auto-post scheduler — posts all due rules idempotently, backfills up to 90 days |
+| `computeInsights({ month?, today?, includeDismissed? })` | Compute monthly insights (overspend, pace, first-payee, subscription drift) |
+| `dismissInsight(id)` / `resetDismissedInsights()` | Persisted dismissal of insight cards via `localStorage['dm-insights-dismissed']` |
 
 ---
 
