@@ -256,7 +256,7 @@ element.innerHTML = window.dmIcon('play', 16);
 ### IndexedDB
 
 - **Version is currently 20**: Schema changes require incrementing this and adding upgrade logic in `dm-sync.html` `onupgradeneeded`.
-- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store, v14->15 projectShares store, v15->16 (internal), v16->17 budget stores, v17->18 visual identity fields on projects/todos (additive — no new stores), v18->19 sheets store (spreadsheet workspace, Phase F1), v19->v20 categoryRules store (auto-categorization rules, Phase 3 Slice F).
+- **Version history**: v3->4 writeQueue, v4->5 noteVersions, v5->6 attachments, v6->7 reviewCards, v7->12 taskShares/indexes, v12->13 projects store + projectId index on todos, v13->14 kanbanColumns store, v14->15 projectShares store, v15->16 (internal), v16->17 budget stores, v17->18 visual identity fields on projects/todos (additive — no new stores), v18->19 sheets store (spreadsheet workspace, Phase F1), v19->20 categoryRules store (auto-categorization rules, Phase 3 Slice F).
 - **18 object stores**: notes, todos, meta, writeQueue, noteVersions, attachments, reviewCards, taskShares, projects, kanbanColumns, projectShares, accounts, categories, budgets, transactions, recurring, sheets, categoryRules.
 
 ### Data Sync
