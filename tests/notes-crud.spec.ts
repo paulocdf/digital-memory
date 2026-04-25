@@ -163,7 +163,7 @@ test.describe('Notes CRUD — Data Layer', () => {
     await setup(page);
     const hasStore = await page.evaluate(() => {
       return new Promise<boolean>((resolve) => {
-        const req = indexedDB.open('dm-notes', 18);
+        const req = indexedDB.open('dm-notes', 19);
         req.onsuccess = () => {
           const has = req.result.objectStoreNames.contains('notes');
           req.result.close();

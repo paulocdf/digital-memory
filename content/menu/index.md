@@ -15,6 +15,7 @@ headless: true
 - [**Dashboard**]({{< relref "/docs/dashboard" >}})
 - [**Review**]({{< relref "/docs/review" >}})
 - [**Tags**]({{< relref "/docs/tags" >}})
+- [**Sheets**]({{< relref "/docs/sheets" >}})
 - [**AI**]({{< relref "/docs/ai" >}})
 <br />
 

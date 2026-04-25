@@ -419,5 +419,30 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
     }
+
+    // Spreadsheet workspace (Phase F1 foundation). Per-user isolation only —
+    // sharing is not yet supported. cellsJson is a JSON-stringified blob; we
+    // cap its size here to prevent runaway documents (Firestore's hard limit
+    // is 1 MiB per doc; we keep well below it).
+    match /sheets/{sheetId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'title'])
+                    && request.resource.data.title is string
+                    && request.resource.data.title.size() <= 200
+                    && (!('cellsJson' in request.resource.data)
+                        || (request.resource.data.cellsJson is string
+                            && request.resource.data.cellsJson.size() <= 500000));
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && (!('cellsJson' in request.resource.data)
+                        || (request.resource.data.cellsJson is string
+                            && request.resource.data.cellsJson.size() <= 500000));
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
   }
 }
