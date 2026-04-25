@@ -50,6 +50,7 @@ Digital Memory is a **personal knowledge management system** built as a Hugo sta
 | File | Lines | Description |
 |------|-------|-------------|
 | `themes/hugo-book/layouts/partials/dm-sync.html` | ~4,530 | Data sync engine: IndexedDB + Firestore sync, offline queue, kanban columns, ~40+ public methods via `window.dmSync` |
+| `themes/hugo-book/layouts/partials/dm-demo.html` | ~810 | Demo mode: in-memory fixtures shown to signed-out visitors. Intercepts IDB reads/writes, exposes `window.dmDemo`, renders dismissible top banner with sign-in CTA |
 | `themes/hugo-book/layouts/partials/docs/inject/head.html` | ~250 | Firebase SDK loading + initialization, auth setup |
 | `themes/hugo-book/layouts/partials/docs/html-head.html` | ~1,060 | SDK scripts, marked.js, highlight.js, SortableJS, utilities |
 | `themes/hugo-book/layouts/partials/docs/inject/body.html` | ~4,520 | Quick Capture modal logic, sidebar, ToC builder, sharing UI, settings panel |
@@ -176,6 +177,7 @@ hugo server --disableFastRender
 | `window.dmStorage` | Firebase Storage instance |
 | `window.dmAuthReady` | Promise — resolves when auth state is known |
 | `window.dmSignIn()` | Sign-in helper (popup-first, redirect fallback) |
+| `window.dmDemo` | Demo mode: `isActive()`, `activate()`, `deactivate()`, `fakeUser()`, `userId`, plus `idbGet/GetAll/Put/Delete/Clear/PutBatch` shadow methods used by `dm-sync.html` interception |
 
 ## Critical Rules
 

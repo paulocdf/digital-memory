@@ -128,6 +128,27 @@ window.dmAuthReady.then(function() {
 
 All sign-in buttons must call `window.dmSignIn()` — never raw Firebase auth methods directly.
 
+### Demo Mode
+
+Signed-out visitors see curated dummy data via `window.dmDemo` (defined in `dm-demo.html`). The activation runs synchronously at page parse time when no `dm-cached-user` is in localStorage and `dm-demo-disabled` is not set; it populates an in-memory `_stores` object covering all 16 IDB collections (notes, todos, projects, kanbanColumns, reviewCards, attachments, taskShares, projectShares, accounts, categories, budgets, transactions, recurring, etc.) and then dispatches the standard refresh events (`dm-todos-updated`, `dm-projects-updated`, `dm-budget-updated`, `dm-sync-complete`, …) so every shortcode renders normally.
+
+**Interception**: `dm-sync.html` checks `_demoActive()` inside `idbGet/GetAll/Put/Delete/Clear/PutBatch` and routes to the matching `window.dmDemo.idb*` method. `firestoreWrite()` calls `dmDemo.queueWrite()` (a no-op) so writes stay ephemeral. **`shadowClear` is intentionally a no-op** — the only callers are the dm-sync sign-out cleanup paths, and demo data is rebuilt fresh on each `activate()` anyway. Without this guard the auth-state-changed handler wipes demo fixtures right after population.
+
+**Auth-gated code** that needs to fall through for demo:
+```javascript
+var user = window.dmAuth && window.dmAuth.currentUser;
+if (!user && window.dmDemo && window.dmDemo.isActive()) {
+  user = window.dmDemo.fakeUser(); // { uid, email, displayName, isAnonymous: true, _demo: true }
+}
+if (!user) { /* show sign-in */ return; }
+```
+
+When adding a new IDB store or `getAll*`/`seed*` helper in `dm-sync.html` that early-returns on missing auth, **add a demo-mode fall-through** that reads via the intercepted `idbGetAll(STORE)` (which routes to demo). See `seedDefaultKanbanColumns` for the pattern.
+
+**Banner**: `#dm-demo-banner` (root), `#dm-demo-signin` and `#dm-demo-dismiss` controls. Hidden via `.dm-demo-banner--hidden` class (uses `visibility: hidden` so Playwright `toBeHidden()` works); dismissal persists in `dm-demo-banner-dismissed` localStorage key.
+
+**Opt-out**: `localStorage.setItem('dm-demo-disabled', '1')` prevents activation on subsequent loads.
+
 ### SortableJS Drag-and-Drop
 
 SortableJS instances must be **recreated on every render** because `render()` rebuilds the DOM via `innerHTML`. Pattern:

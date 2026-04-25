@@ -345,6 +345,20 @@ Last updated: 2026-04-10
 - `window.dmAuthReady` promise gates all auth-dependent code
 - User isolation: IDB cleared on sign-out/user switch
 
+### Demo Mode (signed-out preview)
+
+**Files**: `dm-demo.html` (~810 lines), `dm-sync.html` (interception hooks)
+
+Signed-out visitors see a fully populated curated preview of the app instead of empty/sign-in states. All sections render with realistic data: notes (15), todos (~23 spanning today/overdue/upcoming/done), 4 projects, kanban columns + cards, 8 review cards, 51 transactions across 10 categories, budgets, recurring rules, sample task and project share invitations.
+
+- **In-memory only** — `_stores` object holds 16 collections; no IDB writes, no Firestore.
+- **Ephemeral edits** — interactions (creating tasks, marking done, etc.) update the in-memory store and re-render, but reload restores fixtures.
+- **Top banner** — dismissible `#dm-demo-banner` with sign-in CTA; dismissal persists for the session via `dm-demo-banner-dismissed`.
+- **Opt-out** — `localStorage.setItem('dm-demo-disabled', '1')` prevents activation.
+- **Pre-paint activation** — synchronous script in `head.html` sets `data-demo="1"` to avoid layout flash.
+- **Public API**: `window.dmDemo.{ isActive, activate, deactivate, fakeUser, userId, idbGet/GetAll/Put/Delete/Clear/PutBatch }`.
+- **Interception**: `dm-sync.html` routes IDB reads/writes through `dmDemo.idb*` when `_demoActive()`; `firestoreWrite()` short-circuits to `queueWrite()` (no-op).
+
 ---
 
 ## 13. Quick Capture
