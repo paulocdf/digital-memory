@@ -482,6 +482,7 @@ dm-theme-background     (none|dots|grid|paper|noise|gradient)
 - **Project cards** show the project icon/emoji where available; fall back to the color dot
 - **Theme application**: `window.dmApplyProjectTheme(rootEl, project)` writes `data-project-theme="..."`, `data-project-density`, `data-project-pattern`, `data-project-shape`, and CSS variables (`--pj-accent`, `--pj-accent2`, `--pj-radius`, `--pj-density-pad`, `--pj-font`) on the root element. Pass `null` to clear.
 - **Kanban board** picks up the project theme automatically when filtered to exactly one project; clears it when filter is cleared or multi-select.
+- **Per-column accents**: each project can override individual kanban columns with an accent color and a single emoji prefix. Stored as `project.kanbanColumnStyles = { [columnId]: { accent, emoji } }`. Edited from the project edit modal ("Kanban column accents" section, edit-mode only). Applied by the kanban board only when filtered to exactly one project. When a kanban column is deleted, orphan entries are stripped from every project automatically.
 
 ### Task flair
 - **Per-task fields**: `icon`, `emoji`, `labels` (string[]), `borderStyle` (`'rail' | 'full' | 'dashed' | 'glow'`), `priority` (`'low' | 'med' | 'high' | 'urgent'`)
@@ -629,15 +630,6 @@ Modern consistent icon foundation, fully adopted across the app:
   - `resolveReportRange(input)` — normalizes preset ids or `{from, to}` into a `{ id, from, to, label }` range; uses calendar arithmetic for DST safety
   - `priorReportRange(range)` — equal-length window immediately preceding `range.from` (also calendar-arithmetic; returns `null` for zero-length input)
   - `getCategorySpend(rangeArg)` — returns `{ range, prior, rows[], currentTotal, priorTotal, deltaTotal }` where each row is `{ categoryId, name, color, kind, currentCents, priorCents, deltaCents, deltaPct, count }`
-  - `getExpenseTrend({from, to, bucket})` — returns `{ range, bucket, points: [{ key, label, cents, movingAvgCents }], totalCents, peakCents, avgCents, maWindow }`. `bucket` is `'day' | 'week' | 'month' | 'auto'`; `'auto'` picks day for ≤45-day ranges, week for ≤180, else month. Trailing moving average emits `null` until the window is filled (7 day / 4 week / 3 month). Missing buckets are zero-filled to keep the line continuous; income excluded.
-
-### Spending Over Time (trend) — Phase 3 Slice B
-- Hand-rolled SVG line + area chart with dashed moving-average overlay, on the same Reports page below "Spending by category"
-- Bucket toggle (Day / Week / Month) — driven by `getExpenseTrend`'s `bucket` arg; the picker auto-highlights whichever bucket the helper resolved
-- Stats row: total, average per bucket, peak, MA window label
-- Hover overlay: vertical guide line + tooltip with bucket label, spend, and MA
-- Empty-state copy when there are no expenses (`totalCents === 0`)
-- Reuses the sticky range bar from Slice A — selecting a different range repaints the trend automatically
 
 ### Local-only mode
 - Toggle in Settings → Budget
