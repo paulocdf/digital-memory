@@ -134,6 +134,28 @@ window.dmAuthReady.then(function() {
 
 All sign-in buttons must call `window.dmSignIn()` — never raw Firebase auth methods directly.
 
+#### `window.dmOnAuth(callback)` — preferred listener helper
+
+For code that needs to react to auth state changes (rather than just check the current user once via `dmAuthReady`), use **`window.dmOnAuth(callback)`** instead of `window.dmAuth.onAuthStateChanged(callback)` directly:
+
+```javascript
+// preferred — defers until dmAuth is ready, no guard needed
+window.dmOnAuth(function(user) {
+  if (user || (window.dmDemo && window.dmDemo.isActive())) {
+    renderUI();
+  } else {
+    showSignInState();
+  }
+});
+
+// avoid — requires manual `if (window.dmAuth)` guard at every callsite
+if (window.dmAuth) {
+  window.dmAuth.onAuthStateChanged(function(user) { ... });
+}
+```
+
+`dmOnAuth` is defined in `head.html` immediately after Firebase initialization. It returns an unsubscribe function. If `dmAuth` is not yet available when called (rare — only matters for very early script execution), it defers registration until `dmAuthReady` resolves. Foundation code in `dm-sync.html`, `head.html`, and `dm-demo.html` calls `onAuthStateChanged` directly because those files run before or alongside the helper definition.
+
 ### Demo Mode
 
 Signed-out visitors see curated dummy data via `window.dmDemo` (defined in `dm-demo.html`). The activation runs synchronously at page parse time when no `dm-cached-user` is in localStorage and `dm-demo-disabled` is not set; it populates an in-memory `_stores` object covering all 16 IDB collections (notes, todos, projects, kanbanColumns, reviewCards, attachments, taskShares, projectShares, accounts, categories, budgets, transactions, recurring, etc.) and then dispatches the standard refresh events (`dm-todos-updated`, `dm-projects-updated`, `dm-budget-updated`, `dm-sync-complete`, …) so every shortcode renders normally.
