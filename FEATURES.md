@@ -584,6 +584,20 @@ Modern consistent icon foundation, fully adopted across the app:
 - **Bulk actions** — "Skip all duplicates" / "Include all" buttons
 - **Imports via** `dmBudget.createTransaction({ source: 'csv-import', ... })` — sequential promise chain; imported rows auto-marked skipped to prevent double-import on re-click
 
+### Reports (`/docs/budget/reports/`) — Phase 3 Slice A
+- Sticky range bar at top: This month (default), Last month, Last 3 months, Last 6 months, Year to date, Custom (date inputs)
+- **Spending by Category** section: hand-rolled SVG donut + horizontal bar list, sorted by current-period spend desc; uncategorized rolled up under a synthetic "Uncategorized" row (gray)
+- Prior-period comparison: each row shows delta arrow + percentage vs. the equal-length immediately-prior window; `null` deltaPct flagged as "new" when prior was zero
+- Splits credited per-split (no double-counting); soft-deleted transactions excluded
+- Hover linking: hovering a slice or list row dims non-matching items in both views
+- Empty-state copy when no expenses fall in the selected range
+- Listens for `dm-budget-updated` to repaint after data changes
+- Future slices will append: trend line (B), calendar heatmap (C), net worth + cashflow forecast (D), insights cards (E), and a separate `/docs/budget/rules/` page for auto-categorization (F)
+- Helpers added to `window.dmBudget`:
+  - `resolveReportRange(input)` — normalizes preset ids or `{from, to}` into a `{ id, from, to, label }` range; uses calendar arithmetic for DST safety
+  - `priorReportRange(range)` — equal-length window immediately preceding `range.from` (also calendar-arithmetic; returns `null` for zero-length input)
+  - `getCategorySpend(rangeArg)` — returns `{ range, prior, rows[], currentTotal, priorTotal, deltaTotal }` where each row is `{ categoryId, name, color, kind, currentCents, priorCents, deltaCents, deltaPct, count }`
+
 ### Local-only mode
 - Toggle in Settings → Budget
 - Persists to `localStorage` as `dm-budget-local-only`

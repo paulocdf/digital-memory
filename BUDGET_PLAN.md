@@ -349,11 +349,23 @@ Scope is large. Suggest shipping in 5 phases — each phase is usable standalone
 - **Deliverable:** low-friction daily entry + automation.
 
 ### Phase 3 — Reports, charts & insights (1–2 sessions)
-- All 6 charts on `/docs/budget/reports/`
-- Insights cards
-- Calendar heatmap
-- Auto-categorization rules
+Sliced into 6 commits — each independently shippable.
+- [x] **Slice A** — `/docs/budget/reports/` scaffold + Spending-by-Category donut & bar list with prior-period delta. Helpers: `resolveReportRange`, `priorReportRange`, `getCategorySpend`. Sticky range bar (This month / Last month / Last 3 mo / Last 6 mo / YTD / Custom).
+- [ ] **Slice B** — Expense trend line chart (D/W/M bucket switcher, 7-day moving avg). Helper: `getExpenseTrend({from,to,bucket})`.
+- [ ] **Slice C** — Calendar heatmap (year grid, percentile color scale). Helper: `getDailySpend(year)`.
+- [ ] **Slice D** — Net worth area chart (since earliest tx) + 90-day cashflow forecast. Helpers: `getNetWorthSeries({from,to})` (memoized by latest tx `updatedAt`) + `getCashflowForecast({days})`.
+- [ ] **Slice E** — Insights cards (over-spend, subscription drift, first-time payee, on-track-to-overspend) with persisted dismissal. Helper: `computeInsights({month})`.
+- [ ] **Slice F** — Auto-categorization rules at `/docs/budget/rules/`. New IDB store `categoryRules` (v17→v18 bump), serializer + Firestore rules; applied on `createTransaction`, CSV import, and Quick Capture.
 - **Deliverable:** the analytics story.
+
+**Design decisions for Phase 3** (locked in from approved plan + user feedback):
+- Single long-scroll Reports page, not tabs. Sticky range selector at top.
+- Default range: This month.
+- Net worth starts at user's earliest transaction, with "since {date}" caption.
+- Insights dismissal persists across sessions.
+- All date math uses calendar arithmetic (`new Date(y, m, d-n)`), never ms subtraction — DST trap.
+- Splits credited per-split in aggregations; uncategorized rolled up under a synthetic `null`-id row.
+- Charts hand-rolled SVG matching `dashboard.html` style; D3 only if a slice genuinely needs it.
 
 ### Phase 4 — Spreadsheet workspace MVP (2–3 sessions)
 - Workbook/sheet CRUD + navigation

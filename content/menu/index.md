@@ -22,3 +22,4 @@ headless: true
 - [**Transactions**]({{< relref "/docs/budget/transactions" >}})
 - [**Recurring**]({{< relref "/docs/budget/recurring" >}})
 - [**Import**]({{< relref "/docs/budget/import" >}})
+- [**Reports**]({{< relref "/docs/budget/reports" >}})
