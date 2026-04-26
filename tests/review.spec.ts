@@ -74,6 +74,15 @@ async function mockAuth(page: Parameters<typeof cleanupIdb>[0]) {
 // ── Tests ──
 
 test.describe('Flashcard Review', () => {
+  test.beforeEach(async ({ page }) => {
+    // Demo mode (dm-demo.html) seeds 8 review cards in IDB when no cached
+    // user exists, breaking these tests. Disable it for every test in this
+    // suite. addInitScript runs before any page goto, so this covers both
+    // setupReview/setupEmpty (which already call disableDemoMode) and the
+    // Data Layer API tests that goto directly.
+    await disableDemoMode(page);
+  });
+
   test.afterEach(async ({ page }) => {
     await cleanupCards(page);
   });
