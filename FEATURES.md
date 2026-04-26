@@ -487,12 +487,12 @@ dm-theme-background     (none|dots|grid|paper|noise|gradient)
 
 ## 18c. Project & Task Visual Identity
 
-**Files**: `dm-sync.html` (theme registry + `dmApplyProjectTheme`), `project-list.html` (project edit modal + detail banner), `todo-edit-modal.html` (task flair controls), `todo-list.html`, `kanban-board.html` (task flair rendering), `_custom.scss` (CSS), `static/icons/sprite.svg`
+**Files**: `dm-sync.html` (theme registry + `dmApplyProjectTheme`), `project-list.html` (project edit modal + detail header), `todo-edit-modal.html` (task flair controls), `todo-list.html`, `kanban-board.html` (task flair rendering), `_custom.scss` (CSS), `static/icons/sprite.svg`
 
 ### Project appearance
 - **10 curated themes**: default, ocean, sunset, forest, mono, neon, paper, terminal, lavender, citrus — each defines accent, accent2, banner style, pattern, font family, density, card shape
 - **Per-project overrides**: icon (Lucide sprite), emoji, accent / accent2, banner style, pattern (dots/grid/paper/noise/diagonal), density, card shape, font family
-- **Banner**: rendered at the top of the project detail view; shows the project's icon/emoji + name + description + meta over the themed background
+- **Detail header (`.project-detail-header`)**: single themed header at the top of the project detail view — emoji/icon glyph + name + description + meta + action buttons. The `bannerStyle` field (`solid` / `gradient` / `none`) drives its background fill, `pattern` drives the overlay (dots/grid/paper/noise/diagonal), and `accent`/`accent2`/`themeId`/`density`/`cardShape`/`fontFamily` all apply via CSS vars set by `dmApplyProjectTheme()` on the parent `#project-detail-view`. There is no separate large banner element — this header *is* the customizable surface.
 - **Project cards** show the project icon/emoji where available; fall back to the color dot
 - **Theme application**: `window.dmApplyProjectTheme(rootEl, project)` writes `data-project-theme="..."`, `data-project-density`, `data-project-pattern`, `data-project-shape`, and CSS variables (`--pj-accent`, `--pj-accent2`, `--pj-radius`, `--pj-density-pad`, `--pj-font`) on the root element. Pass `null` to clear.
 - **Kanban board** picks up the project theme automatically when filtered to exactly one project; clears it when filter is cleared or multi-select.

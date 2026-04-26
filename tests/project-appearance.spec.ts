@@ -297,16 +297,16 @@ test.describe('Project Appearance — Save round-trip (IDB persistence)', () => 
 });
 
 // ─────────────────────────────────────────────
-// Group 4 — Banner rendering
+// Group 4 — Detail header theming
 // ─────────────────────────────────────────────
 
-test.describe('Project Appearance — Detail banner', () => {
+test.describe('Project Appearance — Detail header', () => {
   test.slow();
   test.afterEach(async ({ page }) => {
     await cleanupIdb(page, 'projects', [PROJECT_ID]);
   });
 
-  test('banner renders with emoji + name from project fields', async ({ page }) => {
+  test('header renders with emoji + name from project fields', async ({ page }) => {
     await setupProjects(page);
     const project = makeProject(PROJECT_ID, 'Sunset Adventures', MOCK_USER.uid, {
       themeId: 'sunset',
@@ -323,15 +323,15 @@ test.describe('Project Appearance — Detail banner', () => {
       t.showDetail(p.id);
     }, project);
 
-    const banner = page.locator('#pj-detail-banner');
-    await expect(banner).toBeVisible();
-    await expect(banner).toHaveAttribute('data-banner-style', 'gradient');
-    await expect(banner).toHaveAttribute('data-pj-pattern', 'noise');
-    await expect(banner.locator('.pj-banner-emoji')).toHaveText('🌅');
-    await expect(banner.locator('#pj-detail-banner-title')).toHaveText('Sunset Adventures');
+    const header = page.locator('.project-detail-header');
+    await expect(header).toBeVisible();
+    await expect(header).toHaveAttribute('data-banner-style', 'gradient');
+    await expect(header).toHaveAttribute('data-pj-pattern', 'noise');
+    await expect(header.locator('.pj-glyph-emoji')).toHaveText('🌅');
+    await expect(header.locator('#project-detail-name')).toHaveText('Sunset Adventures');
   });
 
-  test('banner is hidden when bannerStyle is "none"', async ({ page }) => {
+  test('header has data-banner-style="none" when project bannerStyle is "none"', async ({ page }) => {
     await setupProjects(page);
     const project = makeProject(PROJECT_ID, 'Quiet Project', MOCK_USER.uid, {
       themeId: 'mono',
@@ -345,8 +345,11 @@ test.describe('Project Appearance — Detail banner', () => {
       t.showDetail(p.id);
     }, project);
 
-    const banner = page.locator('#pj-detail-banner');
-    await expect(banner).toBeHidden();
+    const header = page.locator('.project-detail-header');
+    await expect(header).toBeVisible();
+    await expect(header).toHaveAttribute('data-banner-style', 'none');
+    // The legacy stand-alone banner element no longer exists.
+    await expect(page.locator('#pj-detail-banner')).toHaveCount(0);
   });
 });
 
