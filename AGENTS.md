@@ -146,10 +146,11 @@ The emulator wiring is in `themes/hugo-book/layouts/partials/docs/inject/head.ht
 4. If adding a new Firestore field to todos: **update `serializeTodo()` in `dm-sync.html`** (CRITICAL — fields not in this whitelist are silently dropped during sync)
 5. If adding a new Firestore field to notes: **update `serializeNote()` in `dm-sync.html`**
 6. If adding a new IDB object store: **increment the IDB version** (currently v20) and add upgrade logic
-7. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
-8. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`
-9. Update `FEATURES.md` with the new feature
-10. If the feature introduces a new design decision or pattern, update `.context.md`
+7. If adding a new Firestore collection: **add a `match /<collection>/{id}` block to `firestore.rules` AND deploy** with the `firebase-deploy` skill. The repo file alone is not enough — production runs the last-deployed version. Forgetting this surfaces as `[dm-sync] Sync error: FirebaseError: Missing or insufficient permissions` and aborts the entire `syncAll()` chain.
+8. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
+9. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`
+10. Update `FEATURES.md` with the new feature
+11. If the feature introduces a new design decision or pattern, update `.context.md`
 
 ### Adding a New Content Page
 
@@ -205,7 +206,8 @@ The emulator wiring is in `themes/hugo-book/layouts/partials/docs/inject/head.ht
 5. **Hugo parses `{{ }}` in `<script>` blocks** — avoid Go template syntax in JS code (e.g., JSDoc `@returns {{ field }}` will break the build).
 6. **IndexedDB version must increment** for schema changes (add upgrade logic in `dm-sync.html` `onupgradeneeded`).
 7. **`baseURL` includes `/digital-memory/`** — all URLs are prefixed.
-8. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.
+8. **ALWAYS deploy `firestore.rules` after editing it.** A new `match /<collection>/{id}` block in the repo has zero effect until `firebase deploy --only firestore:rules` runs. Use the `firebase-deploy` skill. Skipping this is the most common cause of `[dm-sync] Sync error: FirebaseError: Missing or insufficient permissions` in production.
+9. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.
 9. **Rebase and merge into main before pushing** — we commit directly to `main` (no PRs for now). When a task is done:
    - Rebase: `git fetch origin && git rebase origin/main` (submodule: `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`)
    - Fast-forward merge: `git checkout main && git merge --ff-only <branch>` (submodule: `git -C themes/hugo-book checkout master && git -C themes/hugo-book merge --ff-only <branch>`)

@@ -252,6 +252,7 @@ element.innerHTML = window.dmIcon('play', 16);
 - **`serverTimestamp()` corrupts in IDB**: Firebase sentinel objects lose class identity after IndexedDB structured clone. The `serializeQueueData()` / `deserializeQueueData()` helpers handle this.
 - **15 `onAuthStateChanged` listeners** exist across 11 files. Each is independent — be aware of this when adding more.
 - **Security rules check both `resource.data.userId` and `request.resource.data.userId`** for update operations.
+- **`firestore.rules` is NOT auto-deployed**: Editing the file in the repo only updates source-of-truth — production keeps serving the previously-deployed rules until you run the `firebase-deploy` skill. New collections silently fail with `[dm-sync] Sync error: FirebaseError: Missing or insufficient permissions` and abort the entire `syncAll()` chain until rules are pushed. This has been the #1 source of recurring permission errors.
 
 ### IndexedDB
 
