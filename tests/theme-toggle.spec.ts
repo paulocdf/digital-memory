@@ -1,7 +1,11 @@
 import { test, expect } from '@playwright/test';
+import { disableDemoMode } from './helpers';
 
 test.describe('Theme Toggle', () => {
   test.beforeEach(async ({ page }) => {
+    // Demo mode shows a top banner that intercepts pointer events on the
+    // theme-toggle button. Disable it so click() can reach the toggle.
+    await disableDemoMode(page);
     await page.goto('./');
   });
 

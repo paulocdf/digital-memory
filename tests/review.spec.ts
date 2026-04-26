@@ -4,6 +4,7 @@ import {
   cleanupIdb,
   makeReviewCard,
   disableDemoMode,
+  waitForDmSync,
 } from './helpers';
 
 // ── Test data ──
@@ -36,7 +37,11 @@ async function cleanupCards(page: Parameters<typeof cleanupIdb>[0], cardIds = CA
 async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
   await disableDemoMode(page);
   await page.goto('./docs/review/');
-  await page.waitForFunction(() => !!(window as any).dmSync);
+  // waitForDmSync (not just `!!dmSync`) — it also waits for handleSyncAuth's
+  // IDB-clear-on-fresh-context to complete by polling meta.currentUserId.
+  // Without this, seedCards races with the clear and our fixtures get wiped,
+  // causing flaky failures (wrong counts, "All caught up" missing, etc.).
+  await waitForDmSync(page);
   await seedCards(page, cards);
   // loadQueue now returns a promise — await it so the review UI is ready
   // by the time the test runs (saves ~300 ms per test × 77 tests).
@@ -47,7 +52,7 @@ async function setupReview(page: Parameters<typeof seedIdb>[0], cards = CARDS) {
 async function setupEmpty(page: Parameters<typeof cleanupIdb>[0]) {
   await disableDemoMode(page);
   await page.goto('./docs/review/');
-  await page.waitForFunction(() => !!(window as any).dmSync);
+  await waitForDmSync(page);
   // Clean any leftover cards
   await cleanupCards(page);
   await page.evaluate(() => (window as any)._rvTest.loadQueue());

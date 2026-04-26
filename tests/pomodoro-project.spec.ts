@@ -1,4 +1,5 @@
 import { test, expect, Page } from '@playwright/test';
+import { disableDemoMode } from './helpers';
 
 // ── Test data ──
 
@@ -115,6 +116,9 @@ async function startProjectTask(page: Page, taskId: string, taskTitle: string) {
 
 test.describe('Pomodoro Project-Aware Features', () => {
   test.beforeEach(async ({ page }) => {
+    // Demo mode seeds dummy projects/tasks into IDB which interferes with
+    // assertions about Up Next contents. Disable before goto.
+    await disableDemoMode(page);
     await page.goto('./');
     await page.waitForFunction(() => !!(window as any).dmPomodoro);
     await page.waitForFunction(() => !!(window as any).dmSync && !!(window as any).dmSync.putTodo);
