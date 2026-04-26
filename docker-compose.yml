@@ -1,0 +1,46 @@
+# Per-worktree isolation: the Makefile sets COMPOSE_PROJECT_NAME to the
+# basename of the working directory, so containers, networks, and named
+# volumes are namespaced per worktree. Multiple AI sessions can run
+# `make docker-test` simultaneously with zero host-port collisions because
+# Hugo runs on localhost:1313 *inside* the container — never bound to the
+# host unless you explicitly use --service-ports (e.g. for docker-dev).
+
+services:
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: digital-memory-test:local
+    # init: forwards SIGTERM/SIGINT cleanly so Ctrl-C kills Hugo + Playwright.
+    init: true
+    # Bigger /dev/shm prevents Chromium crashes on heavy parallel test runs.
+    shm_size: "1gb"
+    working_dir: /app
+    environment:
+      # Tells Playwright we're in CI-ish mode if you want CI semantics
+      # (retries, single worker, github reporter). Leave unset by default
+      # so local-style settings apply. Override per-invocation via
+      # `docker compose run -e CI=1 test`.
+      CI: ""
+    volumes:
+      # Live source bind mount so edits show up without rebuilds.
+      - .:/app
+      # Named volumes shadow the host bind mount for paths we want to keep
+      # *image-managed*, not host-managed:
+      #   - node_modules: avoids platform mismatch with host (macOS arm64
+      #     binaries built for darwin can't run in linux container).
+      #   - test-results & playwright-report: persist across runs but stay
+      #     namespaced per Compose project (per worktree).
+      - node_modules:/app/node_modules
+      - test-results:/app/test-results
+      # Playwright HTML report is written here; bind to host so you can
+      # open ./playwright-report/index.html locally.
+      - ./playwright-report:/app/playwright-report
+    # No ports declared by default — tests don't need host ports.
+    # Use `--service-ports` on `docker compose run` for `docker-dev` and
+    # `docker-test-ui` targets to expose a random host port.
+    ports: []
+
+volumes:
+  node_modules:
+  test-results:

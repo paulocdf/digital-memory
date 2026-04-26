@@ -77,6 +77,8 @@ digital-memory/
 ├── storage.rules                      # Firebase Storage rules
 ├── package.json                       # Playwright test dependencies
 ├── playwright.config.ts               # E2E test configuration
+├── Dockerfile.test                    # Hermetic test image (Playwright + Hugo)
+├── docker-compose.yml                 # Per-worktree isolated test runner
 │
 ├── content/
 │   ├── _index.md                      # Landing page (graph + stats)
@@ -179,6 +181,42 @@ npm run test:report
 ```
 
 The Playwright config automatically starts a Hugo dev server on port 1313 when running tests.
+
+### Running Tests in Docker
+
+For hermetic, parallelizable test runs (useful when several worktrees / AI sessions are running tests simultaneously), the project ships with a Docker setup based on the official Playwright image plus Hugo extended.
+
+```bash
+# One-time build (Playwright base + Hugo + npm ci, ~2–3 min)
+make docker-build
+
+# Run the full Playwright suite
+make docker-test
+
+# Run the CI smoke suite (faster)
+make docker-test-ci
+
+# Pass extra args to playwright
+make docker-test ARGS="--project=pre-push"
+
+# Playwright UI mode (exposes UI on a random host port)
+make docker-test-ui
+
+# Hugo dev server inside the container (random host port — see `docker compose ps`)
+make docker-dev
+
+# Drop into a shell with hugo + node + playwright on PATH
+make docker-shell
+
+# Stop and remove this worktree's containers + named volumes
+make docker-down
+```
+
+**Per-worktree isolation.** Each worktree directory becomes its own Docker Compose project automatically (`COMPOSE_PROJECT_NAME` is set to the worktree basename in the Makefile). Two sessions running `make docker-test` from different worktrees won't share containers, networks, volumes, or host ports — Hugo runs at `localhost:1313` *inside* each container and is never bound to the host during plain test runs.
+
+The Playwright HTML report is bind-mounted at `./playwright-report/`, so `npm run test:report` (or just opening `playwright-report/index.html`) works from the host as usual.
+
+Hugo and Playwright versions are pinned in `Dockerfile.test`. Bump them together with `.github/workflows/gh-pages.yml` when upgrading.
 
 ## Deployment
 

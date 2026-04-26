@@ -121,6 +121,28 @@ make run
 hugo server --disableFastRender
 ```
 
+### Running Tests in Docker (REQUIRED for agents)
+
+**Always run tests inside the Docker container, not on the host.** Multiple agent sessions running `npx playwright test` directly on the host collide on Hugo's port 1313, share `reuseExistingServer`, and produce flaky results. The container setup isolates each worktree automatically.
+
+```bash
+make docker-build              # one-time, ~20 min first run (large image pull)
+make docker-test               # full Playwright suite
+make docker-test-ci            # CI smoke subset (faster)
+make docker-test ARGS="--project=pre-push"        # ~5 specs, ~90s
+make docker-test ARGS="tests/inbox-tasks.spec.ts" # single spec
+make docker-shell              # bash inside container (hugo + node + playwright on PATH)
+make docker-down               # nuke this worktree's containers + volumes
+```
+
+**Per-worktree isolation is automatic.** The Makefile sets `COMPOSE_PROJECT_NAME` from the worktree's basename, so containers, networks, and named volumes (`{worktree}_node_modules`, `{worktree}_test-results`, `{worktree}_default` network) never collide across parallel sessions. Hugo runs on `localhost:1313` *inside* each container — no host port is bound during tests.
+
+**Reports**: `playwright-report/` is bind-mounted, so opening `playwright-report/index.html` on the host works as usual after a run.
+
+**Version pinning rule**: `Dockerfile.test` pins Playwright (`mcr.microsoft.com/playwright:vX.Y.Z-jammy`) and Hugo (`HUGO_VERSION` arg). When bumping `@playwright/test` in `package.json`, **also bump the `FROM` line in `Dockerfile.test` to the same `vX.Y.Z`** — Playwright refuses to launch with mismatched browser binaries. When bumping Hugo in `.github/workflows/gh-pages.yml`, also bump the `HUGO_VERSION` arg.
+
+Host-side `npm test` still works for ad-hoc local runs by the human user, but agents must use the Docker targets so parallel sessions are safe.
+
 ### Firebase Emulators (optional, devtime only)
 
 For offline iteration without hitting live Firebase, start the emulator suite in a separate terminal:
@@ -207,8 +229,8 @@ The emulator wiring is in `themes/hugo-book/layouts/partials/docs/inject/head.ht
 6. **IndexedDB version must increment** for schema changes (add upgrade logic in `dm-sync.html` `onupgradeneeded`).
 7. **`baseURL` includes `/digital-memory/`** — all URLs are prefixed.
 8. **ALWAYS deploy `firestore.rules` after editing it.** A new `match /<collection>/{id}` block in the repo has zero effect until `firebase deploy --only firestore:rules` runs. Use the `firebase-deploy` skill. Skipping this is the most common cause of `[dm-sync] Sync error: FirebaseError: Missing or insufficient permissions` in production.
-9. **Run tests** before pushing: `npm test` runs 326 Playwright E2E tests (17 spec files). Hugo dev server starts automatically. See `.context.md` for test patterns.
-9. **Rebase and merge into main before pushing** — we commit directly to `main` (no PRs for now). When a task is done:
+9. **Run tests** before pushing: use `make docker-test` (full suite) or `make docker-test ARGS="--project=pre-push"` (~90s smoke). **Never run `npx playwright test` directly on the host** — parallel agent sessions collide on Hugo's port 1313. Hugo dev server starts automatically inside the container. See `.context.md` for test patterns.
+10. **Rebase and merge into main before pushing** — we commit directly to `main` (no PRs for now). When a task is done:
    - Rebase: `git fetch origin && git rebase origin/main` (submodule: `git -C themes/hugo-book fetch origin && git -C themes/hugo-book rebase origin/master`)
    - Fast-forward merge: `git checkout main && git merge --ff-only <branch>` (submodule: `git -C themes/hugo-book checkout master && git -C themes/hugo-book merge --ff-only <branch>`)
    - Push submodule first (if changed), then parent. See the `submodule-push` skill for the full workflow.

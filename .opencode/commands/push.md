@@ -11,7 +11,11 @@ First, check the current state:
 
 ## 1. Run tests
 
-!`npm test`
+Use the Docker target so this session doesn't collide with other agent sessions on Hugo's port 1313:
+
+!`make docker-test`
+
+(For a faster smoke check use `make docker-test ARGS="--project=pre-push"` instead.)
 
 If tests fail, fix them before proceeding. Do NOT push broken code.
 

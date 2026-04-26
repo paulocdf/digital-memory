@@ -1,0 +1,50 @@
+# Hermetic test runner: Playwright browsers + Hugo extended + Node.
+# Multi-arch: builds natively on linux/arm64 (Apple Silicon) and linux/amd64 (CI).
+#
+# The Playwright base image already ships with Chromium + system deps for the
+# pinned version, so we don't run `npx playwright install` here.
+#
+# Hugo version is pinned to match .github/workflows/gh-pages.yml. Bump both
+# together when upgrading.
+FROM mcr.microsoft.com/playwright:v1.58.2-jammy
+
+ARG HUGO_VERSION=0.124.1
+ARG TARGETARCH
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    NODE_ENV=development \
+    CI=
+
+# Hugo extended (.deb publishes linux-amd64 and linux-arm64 assets).
+RUN set -eux; \
+    arch="${TARGETARCH:-amd64}"; \
+    case "$arch" in \
+        amd64) hugo_arch="linux-amd64" ;; \
+        arm64) hugo_arch="linux-arm64" ;; \
+        *) echo "Unsupported arch: $arch" >&2; exit 1 ;; \
+    esac; \
+    apt-get update && apt-get install -y --no-install-recommends curl ca-certificates git make; \
+    curl -fsSL -o /tmp/hugo.deb \
+        "https://github.com/gohugoio/hugo/releases/download/v${HUGO_VERSION}/hugo_extended_${HUGO_VERSION}_${hugo_arch}.deb"; \
+    dpkg -i /tmp/hugo.deb; \
+    rm /tmp/hugo.deb; \
+    rm -rf /var/lib/apt/lists/*; \
+    hugo version
+
+WORKDIR /app
+
+# Install Node deps in the image so the named volume mounted at
+# /app/node_modules is pre-populated on first run (Compose copies image
+# contents into a fresh named volume). Source files are bind-mounted at
+# runtime, so package.json edits + rebuild are still required after dep
+# changes.
+COPY package.json package-lock.json ./
+RUN npm ci
+
+# Source comes in via bind mount in docker-compose.yml; this COPY is just so
+# the image is independently runnable (e.g., for one-off `docker run`).
+COPY . .
+
+# Default: run the full Playwright suite. Override at `docker compose run`
+# time for ad-hoc commands.
+CMD ["npx", "playwright", "test"]

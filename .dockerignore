@@ -1,0 +1,41 @@
+# Keep the build context small. Anything matched here is invisible to the
+# Dockerfile's COPY steps. Source files come in via the bind mount at runtime.
+
+# Node + Playwright artifacts (rebuilt inside the container)
+node_modules
+playwright-report
+test-results
+tests/.auth
+
+# Hugo build output
+public
+resources
+.hugo_build.lock
+
+# Firebase emulator state (not used in container yet)
+.emulator-data
+
+# Git internals + worktrees
+.git
+.gitignore
+.gitmodules
+
+# Editor / OS noise
+.DS_Store
+.vscode
+.idea
+*.swp
+
+# Project plan + scratch docs
+PLAN-*.md
+BUDGET_PLAN.md
+ENHANCEMENTS.md
+
+# Tooling configs not needed in the image
+.opencode
+.plannotator
+
+# Docker files themselves (avoid rebuild churn when only compose changes)
+Dockerfile.test
+docker-compose.yml
+.dockerignore

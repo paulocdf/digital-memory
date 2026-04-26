@@ -97,9 +97,17 @@ git -C themes/hugo-book add -A
 
 Run the full test suite before pushing. Do NOT skip this.
 
+Use the Docker target so this session does not collide with other parallel agent sessions on Hugo's port 1313:
+
 ```bash
-npm test
+make docker-test
+# or, for a faster ~90s smoke check:
+make docker-test ARGS="--project=pre-push"
 ```
+
+If the image is not built yet, run `make docker-build` once first (~20 min on first pull).
+
+**Never run `npx playwright test` or `npm test` directly on the host** from an agent session — parallel sessions share Hugo's port 1313 and produce flaky results. See `AGENTS.md` "Running Tests in Docker" for details.
 
 If tests fail, fix the failures before proceeding. Do not push broken code.
 
@@ -180,7 +188,7 @@ git push origin main
 
 ## Critical Rules
 
-1. **Always run tests before pushing** — `npm test` must pass. Do not push broken code.
+1. **Always run tests before pushing** — `make docker-test` must pass. Do not push broken code. Agents must use the Docker target (not host `npm test`) so parallel sessions don't collide.
 2. **Always rebase onto main before pushing** — keeps history linear, avoids merge commits.
 3. **Always squash to a single commit per task** — use `git reset --soft origin/main` before committing. One task = one commit on `main`.
 4. **Always use Conventional Commits format** — `type(scope): summary` in imperative mood, lowercase, max 72 chars.
