@@ -465,5 +465,32 @@ service cloud.firestore {
       allow delete: if request.auth != null
                     && resource.data.userId == request.auth.uid;
     }
+
+    // Note sections (v21). Per-user isolation. Configurable rename of the four
+    // built-in sections (inbox/topic/book-note/snippets) plus user-defined
+    // flat sections referenced by notes via destination = 'section:<id>'.
+    // Soft-deleted via `deletedAt`; reads still allowed for owner.
+    match /noteSections/{sectionId} {
+      allow read: if request.auth != null
+                  && resource.data.userId == request.auth.uid;
+      allow create: if request.auth != null
+                    && request.resource.data.userId == request.auth.uid
+                    && request.resource.data.keys().hasAll(['userId', 'name', 'slug'])
+                    && request.resource.data.name is string
+                    && request.resource.data.name.size() <= 200
+                    && request.resource.data.slug is string
+                    && request.resource.data.slug.size() <= 200;
+      allow update: if request.auth != null
+                    && resource.data.userId == request.auth.uid
+                    && request.resource.data.userId == request.auth.uid
+                    && (!('name' in request.resource.data)
+                        || (request.resource.data.name is string
+                            && request.resource.data.name.size() <= 200))
+                    && (!('slug' in request.resource.data)
+                        || (request.resource.data.slug is string
+                            && request.resource.data.slug.size() <= 200));
+      allow delete: if request.auth != null
+                    && resource.data.userId == request.auth.uid;
+    }
   }
 }

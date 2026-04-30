@@ -167,7 +167,7 @@ The emulator wiring is in `themes/hugo-book/layouts/partials/docs/inject/head.ht
 3. For any data changes, use the `firestoreWrite()` dual-write pattern (see `CONVENTIONS.md`)
 4. If adding a new Firestore field to todos: **update `serializeTodo()` in `dm-sync.html`** (CRITICAL — fields not in this whitelist are silently dropped during sync)
 5. If adding a new Firestore field to notes: **update `serializeNote()` in `dm-sync.html`**
-6. If adding a new IDB object store: **increment the IDB version** (currently v20) and add upgrade logic
+6. If adding a new IDB object store: **increment the IDB version** (currently v21) and add upgrade logic
 7. If adding a new Firestore collection: **add a `match /<collection>/{id}` block to `firestore.rules` AND deploy** with the `firebase-deploy` skill. The repo file alone is not enough — production runs the last-deployed version. Forgetting this surfaces as `[dm-sync] Sync error: FirebaseError: Missing or insufficient permissions` and aborts the entire `syncAll()` chain.
 8. If adding a new modal: follow the modal pattern (see `CONVENTIONS.md`)
 9. If adding a new page: create `content/docs/pagename.md` + shortcode + add to `content/menu/index.md`

@@ -297,7 +297,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -476,7 +476,7 @@ test.describe('Flashcard Review', () => {
       // Cleanup the dynamically created card
       await page.evaluate(() => {
         return new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readwrite');
@@ -510,7 +510,7 @@ test.describe('Flashcard Review', () => {
       // Cleanup
       await page.evaluate(() => {
         return new Promise<void>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readwrite');
@@ -642,7 +642,7 @@ test.describe('Flashcard Review', () => {
       // Verify the card was updated in IDB
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -670,7 +670,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -698,7 +698,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -795,7 +795,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -860,7 +860,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -887,7 +887,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -913,7 +913,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -946,7 +946,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -977,7 +977,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -1010,7 +1010,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate((id) => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');
@@ -1130,7 +1130,7 @@ test.describe('Flashcard Review', () => {
 
       const card = await page.evaluate(() => {
         return new Promise<any>((resolve, reject) => {
-          const req = indexedDB.open('dm-notes', 20);
+          const req = indexedDB.open('dm-notes', 21);
           req.onsuccess = () => {
             const db = req.result;
             const tx = db.transaction('reviewCards', 'readonly');

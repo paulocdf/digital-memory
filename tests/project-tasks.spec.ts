@@ -55,7 +55,7 @@ async function seedData(page: Page, tasks = TASKS) {
       const dmSync = (window as any).dmSync;
       const taskPromises = tasks.map((t: any) => dmSync.putTodo(t));
       const projectPromise = new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('dm-notes', 20);
+        const req = indexedDB.open('dm-notes', 21);
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction('projects', 'readwrite');
@@ -80,7 +80,7 @@ async function cleanupData(page: Page, taskIds = ALL_TASK_IDS) {
         dmSync.deleteTodo(id).catch(() => {})
       );
       const projectPromise = new Promise<void>((resolve, reject) => {
-        const req = indexedDB.open('dm-notes', 20);
+        const req = indexedDB.open('dm-notes', 21);
         req.onsuccess = () => {
           const db = req.result;
           const tx = db.transaction('projects', 'readwrite');
