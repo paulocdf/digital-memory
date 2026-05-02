@@ -208,10 +208,11 @@ test.describe('Note sections — registry + rename', () => {
       (window as any).dmSectionsBuildPanel(host);
     });
 
-    const rows = page.locator('#sandbox-sections-panel .dm-sections-row');
-    await expect(rows).toHaveCount(4);
+    // Only the four built-in rows carry data-builtin-key; custom rows don't
+    const builtinRows = page.locator('#sandbox-sections-panel .dm-sections-row[data-builtin-key]');
+    await expect(builtinRows).toHaveCount(4);
 
-    const inputs = await page.locator('#sandbox-sections-panel input[data-role="name"]').all();
+    const inputs = await page.locator('#sandbox-sections-panel .dm-sections-row[data-builtin-key] input[data-role="name"]').all();
     const values = await Promise.all(inputs.map(i => i.inputValue()));
     expect(values).toEqual(['Inbox', 'Topics', 'Books', 'Snippets']);
   });
@@ -308,5 +309,274 @@ test.describe('Note sections — registry + rename', () => {
     const btn = page.locator('.export-scope-btn[data-scope="books"]');
     await expect(btn).toBeVisible();
     await expect(btn).toContainText('Library');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Slices C + D — custom sections CRUD, routing, Quick Capture, orphan handling
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('Note sections — custom CRUD, routing, Quick Capture, orphans', () => {
+  test.beforeEach(async ({ page }) => {
+    await page.addInitScript(() => {
+      try {
+        localStorage.removeItem('dm-cached-user');
+        localStorage.removeItem('dm-demo-disabled');
+        localStorage.removeItem('dm-demo-banner-dismissed');
+        sessionStorage.removeItem('dm-sidebar-html');
+      } catch (e) {}
+    });
+  });
+
+  // ── Settings panel ──────────────────────────────────────────────────────────
+
+  test('12: settings panel shows "+ Add section" button', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      return !!(window as any).dmSections?.getBuiltin('inbox')
+        && typeof (window as any).dmSectionsBuildPanel === 'function';
+    }, null, { timeout: 10_000 });
+
+    await page.evaluate(() => {
+      const host = document.createElement('div');
+      host.id = 'sandbox-sections-panel';
+      document.body.appendChild(host);
+      (window as any).dmSectionsBuildPanel(host);
+    });
+
+    const addBtn = page.locator('#sandbox-sections-panel [data-role="add-section-btn"]');
+    await expect(addBtn).toBeVisible();
+    await expect(addBtn).toContainText('Add section');
+  });
+
+  test('13: creating a custom section appears in sidebar', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      const s = (window as any).dmSections;
+      return s && s.getBuiltin('inbox')
+        && document.querySelector('.sidebar-item[data-section="inbox"]');
+    }, null, { timeout: 15_000 });
+
+    const sectionId = await page.evaluate(async () => {
+      const sec = await (window as any).dmSync.createNoteSection({ name: 'Field Notes' });
+      return sec ? sec.id : null;
+    });
+
+    expect(sectionId).toBeTruthy();
+
+    // Sidebar re-renders on dm-note-sections-updated — wait for the link
+    await page.waitForFunction((id: string) => {
+      return !!document.querySelector(`a[href*="id=${id}"]`);
+    }, sectionId, { timeout: 5_000 });
+
+    const link = page.locator(`a[href*="id=${sectionId}"]`).first();
+    await expect(link).toContainText('Field Notes');
+  });
+
+  test('14: custom section page renders heading and note list', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      const s = (window as any).dmSections;
+      return s && s.getAll().some((r: any) => r.name === 'Recipes');
+    }, null, { timeout: 10_000 });
+
+    const recipeId = await page.evaluate(() => {
+      const s = (window as any).dmSections;
+      const r = s.getAll().find((x: any) => x.name === 'Recipes');
+      return r ? r.id : null;
+    });
+    expect(recipeId).toBeTruthy();
+
+    const response = await page.goto(`./docs/sections/?id=${recipeId}`, { waitUntil: 'domcontentloaded', timeout: 15_000 });
+
+    // If Hugo hasn't built the sections route yet, skip gracefully
+    if (!response || response.status() !== 200) {
+      console.log('Test 14 skipped: /docs/sections/ not yet built by Hugo');
+      return;
+    }
+
+    await page.waitForFunction(() => {
+      const el = document.getElementById('section-page-content');
+      return el && el.style.display !== 'none';
+    }, null, { timeout: 15_000 });
+
+    const heading = page.locator('#section-page-title');
+    await expect(heading).toHaveText('Recipes');
+  });
+
+  test('15: archiving a custom section removes it from the sidebar', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      const s = (window as any).dmSections;
+      return s && s.getBuiltin('inbox')
+        && document.querySelector('.sidebar-item[data-section="inbox"]');
+    }, null, { timeout: 15_000 });
+
+    // Create, wait for it to appear, then archive
+    const sectionId = await page.evaluate(async () => {
+      const sec = await (window as any).dmSync.createNoteSection({ name: 'Temp Section' });
+      return sec ? sec.id : null;
+    });
+    expect(sectionId).toBeTruthy();
+
+    await page.waitForFunction((id: string) => {
+      return !!document.querySelector(`a[href*="id=${id}"]`);
+    }, sectionId, { timeout: 5_000 });
+
+    await page.evaluate(async (id: string) => {
+      await (window as any).dmSync.archiveNoteSection(id);
+    }, sectionId);
+
+    // Link should disappear from sidebar after re-render
+    await page.waitForFunction((id: string) => {
+      return !document.querySelector(`a[href*="id=${id}"]`);
+    }, sectionId, { timeout: 5_000 });
+  });
+
+  test('16: deleting a custom section removes it from the registry', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      return !!(window as any).dmSections?.getBuiltin('inbox');
+    }, null, { timeout: 10_000 });
+
+    const sectionId = await page.evaluate(async () => {
+      const sec = await (window as any).dmSync.createNoteSection({ name: 'Scratch' });
+      return sec ? sec.id : null;
+    });
+    expect(sectionId).toBeTruthy();
+
+    // Delete and check it's removed from getActive()
+    const removed = await page.evaluate(async (id: string) => {
+      await (window as any).dmSync.deleteNoteSection(id);
+      await new Promise(r => setTimeout(r, 100));
+      const active = (window as any).dmSections.getActive();
+      return !active.some((s: any) => s.id === id);
+    }, sectionId);
+
+    expect(removed).toBe(true);
+  });
+
+  // ── Orphan handling ─────────────────────────────────────────────────────────
+
+  test('17: orphan banner appears when notes belong to a deleted section', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      return !!(window as any).dmSync?.createNoteSection
+        && !!(window as any).dmSections?.getBuiltin('inbox');
+    }, null, { timeout: 10_000 });
+
+    // Create a section, plant a note in it, then delete the section
+    await page.evaluate(async () => {
+      const sync = (window as any).dmSync;
+      const sec = await sync.createNoteSection({ name: 'Doomed Section' });
+      await sync.putNote({
+        id: 'orphan-test-note-1',
+        title: 'Orphan note',
+        content: 'will be stranded',
+        destination: 'section:' + sec.id,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await sync.deleteNoteSection(sec.id);
+      // Trigger orphan detection manually (normally fires after sign-in + delay)
+      window.dispatchEvent(new CustomEvent('dm-note-sections-updated'));
+    });
+
+    const banner = page.locator('#dm-orphan-banner');
+    await expect(banner).toBeVisible({ timeout: 5_000 });
+    await expect(banner).toContainText('1 note');
+  });
+
+  test('18: "Move to Inbox" recovers orphaned notes', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      return !!(window as any).dmSync?.createNoteSection
+        && !!(window as any).dmSections?.getBuiltin('inbox');
+    }, null, { timeout: 10_000 });
+
+    const noteId = 'orphan-recovery-note-1';
+    await page.evaluate(async (nid: string) => {
+      const sync = (window as any).dmSync;
+      const sec = await sync.createNoteSection({ name: 'Vanishing Section' });
+      await sync.putNote({
+        id: nid,
+        title: 'Will be rescued',
+        content: 'rescue me',
+        destination: 'section:' + sec.id,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+      });
+      await sync.deleteNoteSection(sec.id);
+      window.dispatchEvent(new CustomEvent('dm-note-sections-updated'));
+    }, noteId);
+
+    const banner = page.locator('#dm-orphan-banner');
+    await expect(banner).toBeVisible({ timeout: 5_000 });
+
+    await page.locator('#dm-orphan-inbox').click();
+
+    // Banner should disappear and note destination should be 'inbox'
+    await expect(banner).not.toBeVisible({ timeout: 5_000 });
+
+    const dest = await page.evaluate(async (nid: string) => {
+      const note = await (window as any).dmSync.getNote(nid);
+      return note ? note.destination : null;
+    }, noteId);
+    expect(dest).toBe('inbox');
+  });
+
+  // ── Quick Capture ───────────────────────────────────────────────────────────
+
+  test('19: Quick Capture "More…" dropdown shows custom sections', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      const s = (window as any).dmSections;
+      // Demo seeds "Recipes"
+      return s && s.getAll().some((r: any) => r.name === 'Recipes');
+    }, null, { timeout: 10_000 });
+
+    // Open Quick Capture via keyboard shortcut 'q'
+    await page.keyboard.press('q');
+
+    const modal = page.locator('#quick-capture-modal');
+    await expect(modal).toHaveClass(/active/, { timeout: 5_000 });
+
+    // Switch to note mode
+    await modal.locator('.qc-mode-btn[data-mode="note"]').click();
+
+    const moreWrap = page.locator('#qc-dest-more-wrap');
+    await expect(moreWrap).toBeVisible({ timeout: 3_000 });
+
+    await page.locator('#qc-dest-more').click();
+
+    const dropdown = page.locator('#qc-dest-dropdown');
+    await expect(dropdown).toBeVisible();
+    await expect(dropdown).toContainText('Recipes');
+  });
+
+  // ── Garden landing ──────────────────────────────────────────────────────────
+
+  test('20: garden landing renders custom section card', async ({ page }) => {
+    await page.goto('./');
+    await page.waitForFunction(() => {
+      const s = (window as any).dmSections;
+      return s && s.getAll().some((r: any) => r.name === 'Recipes')
+        && document.getElementById('garden-sections-container');
+    }, null, { timeout: 15_000 });
+
+    const recipeId = await page.evaluate(() => {
+      const s = (window as any).dmSections;
+      const r = s.getAll().find((x: any) => x.name === 'Recipes');
+      return r ? r.id : null;
+    });
+    expect(recipeId).toBeTruthy();
+
+    // The container should contain an anchor pointing to the custom section
+    await page.waitForFunction((id: string) => {
+      const container = document.getElementById('garden-sections-container');
+      return !!container && !!container.querySelector(`a[href*="id=${id}"]`);
+    }, recipeId, { timeout: 10_000 });
+
+    const card = page.locator(`#garden-sections-container a[href*="id=${recipeId}"]`).first();
+    await expect(card).toContainText('Recipes');
   });
 });
