@@ -1030,7 +1030,7 @@ test.describe('Flashcard Review', () => {
   test.describe('Data Layer API', () => {
     test('createReviewCard stores card in IDB', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
 
       const card = await page.evaluate(() => {
@@ -1050,7 +1050,7 @@ test.describe('Flashcard Review', () => {
 
     test('createReviewCard rejects empty front', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
 
       const error = await page.evaluate(() => {
@@ -1061,7 +1061,7 @@ test.describe('Flashcard Review', () => {
 
     test('createReviewCard rejects empty back', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
 
       const error = await page.evaluate(() => {
@@ -1072,7 +1072,7 @@ test.describe('Flashcard Review', () => {
 
     test('getReviewCards(false) returns all cards', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await seedCards(page);
 
       const cards = await page.evaluate(() => (window as any).dmSync.getReviewCards(false));
@@ -1085,7 +1085,7 @@ test.describe('Flashcard Review', () => {
         makeCard('rv-card-2', 'Future Q', 'Future A', { nextReviewAt: Date.now() + 86400000 * 30 }),
       ];
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await seedCards(page, mixedCards);
 
       const dueCards = await page.evaluate(() => (window as any).dmSync.getReviewCards(true));
@@ -1095,7 +1095,7 @@ test.describe('Flashcard Review', () => {
 
     test('getDueCount returns correct count', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await seedCards(page);
 
       const count = await page.evaluate(() => (window as any).dmSync.getDueCount());
@@ -1104,7 +1104,7 @@ test.describe('Flashcard Review', () => {
 
     test('deleteReviewCard removes card from IDB', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
       await seedCards(page, [makeCard('rv-card-1', 'Q', 'A')]);
 
@@ -1116,7 +1116,7 @@ test.describe('Flashcard Review', () => {
 
     test('updateReviewCardContent updates content and tags', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
       await seedCards(page, [makeCard('rv-card-1', 'Old Q', 'Old A', { tags: ['old'] })]);
 
@@ -1151,7 +1151,7 @@ test.describe('Flashcard Review', () => {
 
     test('reviewCard dispatches dm-review-updated event', async ({ page }) => {
       await page.goto('./docs/review/');
-      await page.waitForFunction(() => !!(window as any).dmSync);
+      await waitForDmSync(page);
       await mockAuth(page);
       await seedCards(page, [makeCard('rv-card-1', 'Q', 'A')]);
 
